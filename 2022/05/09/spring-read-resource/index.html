@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    
+    <title>Spring项目的resources目录下的文件读取 | ReLive27的博客</title>
+
+    <meta name="description" content="&lt;!-- SpringBoot --&gt;">
+    <meta name="keywords" content="">
+
+    
+
+    <meta property="og:locale" content="cn" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content= "Spring项目的resources目录下的文件读取 | ReLive27的博客"  />
+    <meta property="og:description" content= "&lt;!-- SpringBoot --&gt;" />
+    <meta property="og:url" content="https://relive27.github.io/2022/05/09/spring-read-resource/index.html" />
+    <meta property="og:site_name" content="" />
+    <meta property="article:author" content="ReLive27" />
+    <meta property="article:publisher" content="" />
+    <meta property="og:description" content="&lt;!-- SpringBoot --&gt;" />
+    <meta name="twitter:title" content="Spring项目的resources目录下的文件读取 | ReLive27的博客"/>
+    <meta name="twitter:description" content="&lt;!-- SpringBoot --&gt;"/>
+    <script type="application/ld+json">
+        {
+            "description": "&lt;!-- SpringBoot --&gt;",
+            "author": { "@type": "Person", "name": "ReLive27" },
+            "@type": "BlogPosting",
+            "url": "https://relive27.github.io/2022/05/09/spring-read-resource/index.html",
+            "publisher": {
+            "@type": "Organization",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://relive27.github.ioundefined"
+            },
+            "name": "ReLive27"
+            },
+            "headline": "Spring项目的resources目录下的文件读取 | ReLive27的博客",
+            "datePublished": "2022-05-09T12:50:16.000Z",
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://relive27.github.io/2022/05/09/spring-read-resource/index.html"
+            },
+            "@context": "http://schema.org"
+        }
+    </script>
+
+
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+<link rel="stylesheet" href="/dist/build.css?v=1651727875408.css">
+
+
+    
+<link rel="stylesheet" href="/dist/custom.css?v=1651727875408.css">
+
+
+    <script>
+        window.isPost = true
+        window.aomori = {
+            
+            
+            
+        }
+        window.aomori_logo_typed_animated = false
+        window.aomori_search_algolia = false
+
+    </script>
+
+<meta name="generator" content="Hexo 6.1.0"></head>
+
+<body>
+
+    <div class="container">
+    <header class="header">
+        <div class="header-type">
+            
+            <div class="header-type-inner">
+                
+                    <a class="header-type-title" href="/">ReLive27的博客</a>
+                
+    
+                
+            </div>
+        </div>
+        <div class="header-menu">
+            <div class="header-menu-inner">
+                
+            </div>
+            <div class="header-menu-social">
+                
+            </div>
+        </div>
+
+        <div class="header-menu-mobile">
+            <div class="header-menu-mobile-inner" id="mobile-menu-open">
+                <i class="icon icon-menu"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="header-menu-mobile-menu">
+        <div class="header-menu-mobile-menu-bg"></div>
+        <div class="header-menu-mobile-menu-wrap">
+            <div class="header-menu-mobile-menu-inner">
+                <div class="header-menu-mobile-menu-close" id="mobile-menu-close">
+                    <i class="icon icon-cross"></i>
+                </div>
+                <div class="header-menu-mobile-menu-list">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+    <div class="container">
+        <div class="main">
+            <section class="inner">
+                <section class="inner-main">
+                    <div class="post">
+    <article id="post-cl2yq8u7u0001huuzcqgjckp7" class="article article-type-post" itemscope
+    itemprop="blogPost">
+
+    <div class="article-inner">
+
+        
+          
+        
+        
+        
+
+        
+        <header class="article-header">
+            
+  
+    <h1 class="article-title" itemprop="name">
+      Spring项目的resources目录下的文件读取
+    </h1>
+  
+
+        </header>
+        
+
+        <div class="article-more-info article-more-info-post hairline">
+
+            <div class="article-date">
+  <time datetime="2022-05-09T12:50:16.000Z" itemprop="datePublished">2022-05-09</time>
+</div>
+
+            
+            <div class="article-category">
+                <a class="article-category-link" href="/categories/springboot/">springboot</a>
+            </div>
+            
+
+            
+            <div class="article-tag">
+                <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/springboot/" rel="tag">springboot</a></li></ul>
+            </div>
+            
+
+            
+
+        </div>
+
+        <div class="article-entry post-inner-html hairline" itemprop="articleBody">
+            <!-- SpringBoot -->
+<span id="more"></span>
+
+<h3 id="src-x2F-main-x2F-resources和src-x2F-test-x2F-resources下的资源读取方式"><a href="#src-x2F-main-x2F-resources和src-x2F-test-x2F-resources下的资源读取方式" class="headerlink" title="src&#x2F;main&#x2F;resources和src&#x2F;test&#x2F;resources下的资源读取方式"></a>src&#x2F;main&#x2F;resources和src&#x2F;test&#x2F;resources下的资源读取方式</h3><p><strong>1.</strong> 一般maven会将spring工程编译到target文件夹下，&#x2F;target&#x2F;classes就是其根目录。而src&#x2F;main&#x2F;resources下的文件被复制到了这个classes文件夹下。</p>
+<p><strong>2.</strong> maven会将src&#x2F;test&#x2F;java文件夹下的代码编译到target&#x2F;test-classes文件夹下。同样的，如果src&#x2F;test&#x2F;resources下有资源文件的话，就复制到target&#x2F;test-classes文件夹下。</p>
+<p>测试代码运行时，优先使用test-classes文件夹下的资源文件，如果不存在，再使用classes文件夹下的资源文件。</p>
+<p><strong>前两种底层代码都是通过类加载器读取流</strong> </p>
+<p><strong>1.</strong> 使用<strong>org.springframework.core.io.ClassPathResource</strong>读取，开发环境和生产环境(Linux下jar包运行读取)都能读取。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Resource resource=<span class="keyword">new</span> <span class="title class_">ClassPathResource</span>(<span class="string">&quot;3.png&quot;</span>);</span><br><span class="line"><span class="type">InputStream</span> <span class="variable">fis</span> <span class="operator">=</span> resource.getInputStream();</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">    fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
+
+<p><strong>2.</strong> 使用流的方式来读取，两种方式，开发环境和生产环境(Linux下jar包运行读取)都能读取。</p>
+<p>方式一：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">InputStream</span> <span class="variable">fis</span> <span class="operator">=</span> <span class="built_in">this</span>.getClass().getResourceAsStream(<span class="string">&quot;/3.png&quot;</span>);</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">    fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
+
+<p>方式二：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">InputStream</span> <span class="variable">fis</span> <span class="operator">=</span> Thread.currentThread().getContextClassLoader().getResourceAsStream(<span class="string">&quot;/3.png&quot;</span>);</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">    fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>3.</strong> 使用<strong>org.springframework.core.io.ResourceLoader</strong> 读取，开发环境和生产环境(Linux下jar包运行读取)都能读取。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Autowired</span></span><br><span class="line">ResourceLoader resourceLoader;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">resourceLoaderTest</span><span class="params">()</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">    <span class="type">Resource</span> <span class="variable">resource</span> <span class="operator">=</span> resourceLoader.getResource(<span class="string">&quot;classpath:3.png&quot;</span>);</span><br><span class="line">    <span class="type">InputStream</span> <span class="variable">fis</span> <span class="operator">=</span> resource.getInputStream();</span><br><span class="line">    OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line">    <span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line">    <span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line">    <span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">        fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">    &#125;</span><br><span class="line">    fos.close();</span><br><span class="line">    fis.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p><strong>4.</strong> 使用<strong>File file&#x3D;new File(“src&#x2F;main&#x2F;resources&#x2F;file.txt”);</strong> 读取，只能在开发环境中读取，不能再生产环境中读取(Linux下jar包运行读取)。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">File file=<span class="keyword">new</span> <span class="title class_">File</span>(<span class="string">&quot;src/main/resources/3.png&quot;</span>);</span><br><span class="line">InputStream fis=<span class="keyword">new</span> <span class="title class_">FileInputStream</span>(file);</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span> ((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">  fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">  System.out.println(<span class="string">&quot;---&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
+
+<p><strong>5.</strong> 使用<strong>org.springframework.util.ResourceUtils</strong> 读取，只能在开发环境中读取，不能再生产环境中读取(Linux下jar包运行读取)。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">File</span> <span class="variable">file</span> <span class="operator">=</span> ResourceUtils.getFile(<span class="string">&quot;src/main/resources/3.png&quot;</span>);</span><br><span class="line">InputStream fis=<span class="keyword">new</span> <span class="title class_">FileInputStream</span>(file);</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">    fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
+
+
+
+        </div>
+
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+<nav class="article-nav">
+  
+  
+    <a href="/2022/05/09/spring-mvc-annotation/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-caption">上一篇</div>
+      <div class="article-nav-title">注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</div>
+    </a>
+  
+</nav>
+
+
+    <section class="share">
+        <div class="share-title">分享</div>
+        <a class="share-item" target="_blank"
+            href="https://twitter.com/share?text=Spring项目的resources目录下的文件读取 - ReLive27的博客&url=https%3A%2F%2Frelive27.github.io%2F2022%2F05%2F09%2Fspring-read-resource%2F">
+            <box-icon type='logo' name='twitter'></box-icon>
+        </a>
+        <a class="share-item" target="_blank"
+            href="https://www.facebook.com/sharer.php?title=Spring项目的resources目录下的文件读取 - ReLive27的博客&u=https%3A%2F%2Frelive27.github.io%2F2022%2F05%2F09%2Fspring-read-resource%2F">
+            <box-icon name='facebook-square' type='logo' ></box-icon>
+        </a>
+        <!-- <a class="share-item" target="_blank"
+            href="https://service.weibo.com/share/share.php?title=Spring项目的resources目录下的文件读取 - ReLive27的博客&url=https://relive27.github.io/2022/05/09/spring-read-resource/&pic=">
+            <div class="n-icon n-icon-weibo"></div>
+        </a> -->
+    </section>
+
+</article>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+                </section>
+            </section>
+
+            
+            <aside class="sidebar ">
+                
+
+
+<div class="widget" id="widget">
+    
+      
+  <div class="widget-wrap">
+    <div class="widget-inner">
+      <div class="toc post-toc-html"></div>
+    </div>
+  </div>
+
+    
+      
+  <div class="widget-wrap widget-cate">
+    <div class="widget-title"><span>Categories</span></div>
+    <div class="widget-inner">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/springboot/">springboot</a></li></ul>
+    </div>
+  </div>
+
+
+    
+      
+  <div class="widget-wrap widget-tags">
+    <div class="widget-title"><span>Tags</span></div>
+    <div class="widget-inner">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/springboot/" rel="tag">springboot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springmvc/" rel="tag">springmvc</a></li></ul>
+    </div>
+  </div>
+
+
+    
+      
+  <div class="widget-wrap widget-recent-posts">
+    <div class="widget-title"><span>Recent Posts</span></div>
+    <div class="widget-inner">
+      <ul>
+        
+          <li>
+            <a href="/2022/05/09/spring-read-resource/">Spring项目的resources目录下的文件读取</a>
+          </li>
+        
+          <li>
+            <a href="/2022/05/09/spring-mvc-annotation/">注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+    
+      
+  <div class="widget-wrap widget-archive">
+    <div class="widget-title"><span>Archive</span></div>
+    <div class="widget-inner">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2022/">2022</a></li></ul>
+    </div>
+  </div>
+
+
+    
+</div>
+
+<div id="backtop"><i class="icon icon-arrow-up"></i></div>
+            </aside>
+            
+        </div>
+    </div>
+
+    <footer class="footer">
+    <div class="footer-wave">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="#3c4859" fill-opacity="1" d="M0,160L60,181.3C120,203,240,245,360,240C480,235,600,181,720,186.7C840,192,960,256,1080,261.3C1200,267,1320,213,1380,186.7L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path></svg>
+    </div>
+
+    <!-- Please do not remove this -->
+    <!-- 开源不易，请勿删除 -->
+    <div class="footer-wrap">
+        <div class="footer-inner"> 
+            ReLive27的博客 &copy; 2022<br>
+            Powered By Hexo · Theme By <a href="https://linhong.me/" target="_blank">Aomori</a> · <a href="https://github.com/lh1me/hexo-theme-aomori" target="_blank">Github</a>
+        </div>
+    </div>
+
+</footer>
+
+
+
+
+
+
+<script src="/dist/build.js?1651727875408.js"></script>
+
+
+<script src="/dist/custom.js?1651727875408.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>
