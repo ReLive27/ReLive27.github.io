@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    
+    <title>SpringBoot整合redis | ReLive27的博客</title>
+
+    <meta name="description" content="&lt;!--redis--&gt;">
+    <meta name="keywords" content="">
+
+    
+
+    <meta property="og:locale" content="cn" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content= "SpringBoot整合redis | ReLive27的博客"  />
+    <meta property="og:description" content= "&lt;!--redis--&gt;" />
+    <meta property="og:url" content="https://relive27.github.io/2022/05/10/springboot-integrate-redis/index.html" />
+    <meta property="og:site_name" content="" />
+    <meta property="article:author" content="ReLive27" />
+    <meta property="article:publisher" content="" />
+    <meta property="og:description" content="&lt;!--redis--&gt;" />
+    <meta name="twitter:title" content="SpringBoot整合redis | ReLive27的博客"/>
+    <meta name="twitter:description" content="&lt;!--redis--&gt;"/>
+    <script type="application/ld+json">
+        {
+            "description": "&lt;!--redis--&gt;",
+            "author": { "@type": "Person", "name": "ReLive27" },
+            "@type": "BlogPosting",
+            "url": "https://relive27.github.io/2022/05/10/springboot-integrate-redis/index.html",
+            "publisher": {
+            "@type": "Organization",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://relive27.github.ioundefined"
+            },
+            "name": "ReLive27"
+            },
+            "headline": "SpringBoot整合redis | ReLive27的博客",
+            "datePublished": "2022-05-10T12:23:20.000Z",
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://relive27.github.io/2022/05/10/springboot-integrate-redis/index.html"
+            },
+            "@context": "http://schema.org"
+        }
+    </script>
+
+
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+<link rel="stylesheet" href="/dist/build.css?v=1651727875408.css">
+
+
+    
+<link rel="stylesheet" href="/dist/custom.css?v=1651727875408.css">
+
+
+    <script>
+        window.isPost = true
+        window.aomori = {
+            
+            
+            
+        }
+        window.aomori_logo_typed_animated = false
+        window.aomori_search_algolia = false
+
+    </script>
+
+<meta name="generator" content="Hexo 6.1.0"></head>
+
+<body>
+
+    <div class="container">
+    <header class="header">
+        <div class="header-type">
+            
+            <div class="header-type-inner">
+                
+                    <a class="header-type-title" href="/">ReLive27的博客</a>
+                
+    
+                
+            </div>
+        </div>
+        <div class="header-menu">
+            <div class="header-menu-inner">
+                
+            </div>
+            <div class="header-menu-social">
+                
+            </div>
+        </div>
+
+        <div class="header-menu-mobile">
+            <div class="header-menu-mobile-inner" id="mobile-menu-open">
+                <i class="icon icon-menu"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="header-menu-mobile-menu">
+        <div class="header-menu-mobile-menu-bg"></div>
+        <div class="header-menu-mobile-menu-wrap">
+            <div class="header-menu-mobile-menu-inner">
+                <div class="header-menu-mobile-menu-close" id="mobile-menu-close">
+                    <i class="icon icon-cross"></i>
+                </div>
+                <div class="header-menu-mobile-menu-list">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+    <div class="container">
+        <div class="main">
+            <section class="inner">
+                <section class="inner-main">
+                    <div class="post">
+    <article id="post-cl305apg6000fktuz2jvgdblq" class="article article-type-post" itemscope
+    itemprop="blogPost">
+
+    <div class="article-inner">
+
+        
+          
+        
+        
+        
+
+        
+        <header class="article-header">
+            
+  
+    <h1 class="article-title" itemprop="name">
+      SpringBoot整合redis
+    </h1>
+  
+
+        </header>
+        
+
+        <div class="article-more-info article-more-info-post hairline">
+
+            <div class="article-date">
+  <time datetime="2022-05-10T12:23:20.000Z" itemprop="datePublished">2022-05-10</time>
+</div>
+
+            
+            <div class="article-category">
+                <a class="article-category-link" href="/categories/springboot/">springboot</a>
+            </div>
+            
+
+            
+            <div class="article-tag">
+                <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SpringBoot/" rel="tag">SpringBoot</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/redis/" rel="tag">redis</a></li></ul>
+            </div>
+            
+
+            
+
+        </div>
+
+        <div class="article-entry post-inner-html hairline" itemprop="articleBody">
+            <!--redis-->
+<span id="more"></span>
+
+<p><img src="/2022/05/10/springboot-integrate-redis/springRedis.png"></p>
+<h2 id="Redis介绍"><a href="#Redis介绍" class="headerlink" title="Redis介绍"></a>Redis介绍</h2><p>Redis是当前比较热门的NOSQL系统之一，它是一个开源的使用ANSI c语言编写的key-value存储系统（区别于MySQL的二维表格的形式存储。）。和Memcache类似，但很大程度补偿了Memcache的不足。和Memcache一样，Redis数据都是缓存在计算机内存中，不同的是，Memcache只能将数据缓存到内存中，无法自动定期写入硬盘，这就表示，一断电或重启，内存清空，数据丢失。所以Memcache的应用场景适用于缓存无需持久化的数据。而Redis不同的是它会周期性的把更新的数据写入磁盘或者把修改操作写入追加的记录文件，实现数据的持久化。</p>
+<p>Redis的特点：</p>
+<ul>
+<li><p>Redis读取的速度是110000次&#x2F;s，写的速度是81000次&#x2F;s；</p>
+</li>
+<li><p>原子 。Redis的所有操作都是原子性的，同时Redis还支持对几个操作全并后的原子性执行。</p>
+</li>
+<li><p>支持多种数据结构：string（字符串）；list（列表）；hash（哈希），set（集合）；zset(有序集合)</p>
+</li>
+<li><p>持久化，集群部署</p>
+</li>
+<li><p>支持过期时间，支持事务，消息订阅</p>
+</li>
+</ul>
+<h2 id="引入依赖"><a href="#引入依赖" class="headerlink" title="引入依赖"></a>引入依赖</h2><p>springboot版本使用的是2.3.0</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.commons<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-pool2<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.6.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="application-yml"><a href="#application-yml" class="headerlink" title="application.yml"></a>application.yml</h2><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="number">192.168</span><span class="number">.234</span><span class="number">.131</span> <span class="comment">#Redis服务器地址</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span>	<span class="comment">#Redis数据库索引（默认为0）</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span>	<span class="comment">#Redis服务器连接端口</span></span><br><span class="line">    <span class="attr">password:</span> <span class="number">123456</span>	<span class="comment">#Redis服务器连接密码（默认为空）</span></span><br><span class="line">    <span class="attr">timeout:</span> <span class="number">180000</span>	<span class="comment">#连接超时时间（毫秒）</span></span><br><span class="line">    <span class="attr">lettuce:</span></span><br><span class="line">      <span class="attr">pool:</span></span><br><span class="line">        <span class="attr">max-active:</span> <span class="number">20</span>	<span class="comment">#连接池最大连接数（使用负值表示没有限制）</span></span><br><span class="line">        <span class="attr">max-wait:</span> <span class="number">10000</span>	<span class="comment">#连接池最大阻塞等待时间（使用负值表示没有限制）</span></span><br><span class="line">        <span class="attr">max-idle:</span> <span class="number">5</span>		<span class="comment">#连接池中的最大空闲连接</span></span><br><span class="line">        <span class="attr">min-idle:</span> <span class="number">0</span>		<span class="comment">#连接池中的最小空闲连接</span></span><br><span class="line">      <span class="attr">shutdown-timeout:</span> <span class="number">100</span>		<span class="comment">#关闭超时时间</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="添加redis配置类"><a href="#添加redis配置类" class="headerlink" title="添加redis配置类"></a>添加redis配置类</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@EnableCaching</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">RedisConfig</span> <span class="keyword">extends</span> <span class="title class_">CachingConfigurerSupport</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> RedisTemplate&lt;String, Object&gt; <span class="title function_">redisTemplate</span><span class="params">(RedisConnectionFactory factory)</span> &#123;</span><br><span class="line">        RedisTemplate&lt;String, Object&gt; template = <span class="keyword">new</span> <span class="title class_">RedisTemplate</span>&lt;&gt;();</span><br><span class="line">        RedisSerializer&lt;String&gt; redisSerializer = <span class="keyword">new</span> <span class="title class_">StringRedisSerializer</span>();</span><br><span class="line">        <span class="type">Jackson2JsonRedisSerializer</span> <span class="variable">jackson2JsonRedisSerializer</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Jackson2JsonRedisSerializer</span>(Object.class);</span><br><span class="line">        <span class="type">ObjectMapper</span> <span class="variable">om</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectMapper</span>();</span><br><span class="line">        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);</span><br><span class="line">        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);</span><br><span class="line">        jackson2JsonRedisSerializer.setObjectMapper(om);</span><br><span class="line">        template.setConnectionFactory(factory);</span><br><span class="line">        <span class="comment">//key序列化方式</span></span><br><span class="line">        template.setKeySerializer(redisSerializer);</span><br><span class="line">        <span class="comment">//value序列化</span></span><br><span class="line">        template.setValueSerializer(jackson2JsonRedisSerializer);</span><br><span class="line">        <span class="comment">//value hashmap序列化</span></span><br><span class="line">        template.setHashValueSerializer(jackson2JsonRedisSerializer);</span><br><span class="line">        <span class="keyword">return</span> template;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> CacheManager <span class="title function_">cacheManager</span><span class="params">(RedisConnectionFactory factory)</span> &#123;</span><br><span class="line">        RedisSerializer&lt;String&gt; redisSerializer = <span class="keyword">new</span> <span class="title class_">StringRedisSerializer</span>();</span><br><span class="line">        <span class="type">Jackson2JsonRedisSerializer</span> <span class="variable">jackson2JsonRedisSerializer</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Jackson2JsonRedisSerializer</span>(Object.class);</span><br><span class="line">        <span class="comment">//解决查询缓存转换异常的问题</span></span><br><span class="line">        <span class="type">ObjectMapper</span> <span class="variable">om</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectMapper</span>();</span><br><span class="line">        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);</span><br><span class="line">        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);</span><br><span class="line">        jackson2JsonRedisSerializer.setObjectMapper(om);</span><br><span class="line">        <span class="comment">// 配置序列化（解决乱码的问题）,过期时间600秒</span></span><br><span class="line">        <span class="type">RedisCacheConfiguration</span> <span class="variable">config</span> <span class="operator">=</span> RedisCacheConfiguration.defaultCacheConfig()</span><br><span class="line">                .entryTtl(Duration.ofSeconds(<span class="number">600</span>))</span><br><span class="line">              .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))</span><br><span class="line">                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))</span><br><span class="line">                .disableCachingNullValues();</span><br><span class="line">        <span class="type">RedisCacheManager</span> <span class="variable">cacheManager</span> <span class="operator">=</span> RedisCacheManager.builder(factory)</span><br><span class="line">                .cacheDefaults(config)</span><br><span class="line">                .build();</span><br><span class="line">        <span class="keyword">return</span> cacheManager;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="SpringBoot缓存注解"><a href="#SpringBoot缓存注解" class="headerlink" title="SpringBoot缓存注解"></a>SpringBoot缓存注解</h2><p><strong>@EnableCaching</strong><br>开启基于注解的缓存</p>
+<p><strong>缓存@Cacheable</strong><br>根据方法对其返回结果进行缓存，下次请求时，如果缓存存在，则直接读取缓存数据返回；如果缓存不存在，则执行方法，并把返回的结果存入缓存中。一般用在查询方法上。属性值如下：</p>
+<table>
+<thead>
+<tr>
+<th align="left">属性名</th>
+<th align="left">解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">value</td>
+<td align="left">缓存名，必填，它指定了你的缓存存放在哪块命名空间</td>
+</tr>
+<tr>
+<td align="left">cacheNames</td>
+<td align="left">与 value 差不多，二选一即可</td>
+</tr>
+<tr>
+<td align="left">key</td>
+<td align="left">缓存的 key，可以为空，如果指定要按照 <strong>SpEL</strong> 表达 式编写，如果不指定，则缺省按照方法的所有参数进行组合</td>
+</tr>
+<tr>
+<td align="left">keyGenerator</td>
+<td align="left">缓存数据时key生成策略，与key属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheManager</td>
+<td align="left">指定自定义CacheManager的名称，与cacheResolver属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheResolver</td>
+<td align="left">指定自定义的CacheResolver名称</td>
+</tr>
+<tr>
+<td align="left">condition</td>
+<td align="left">缓存的条件，可以为空，表示方法结果始终被缓存。而使用 <strong>SpEL</strong> 编写，返回 true 或者 false，只有为 true 才进行缓存&#x2F;清除缓存，在<strong>调用方法之前之后</strong>都能判断</td>
+</tr>
+<tr>
+<td align="left">unless</td>
+<td align="left">用于否决缓存的，不像condition，该表达式只在<strong>方法执行之后</strong>判断，此时可以拿到返回值result进行判 断。条件为true不会缓存，fasle才缓存</td>
+</tr>
+<tr>
+<td align="left">sync</td>
+<td align="left">是否同步，默认是false，如果为true，unless将不受支持</td>
+</tr>
+</tbody></table>
+<p><strong>@CachePut</strong><br>使用该注解标志的方法，每次都会执行，并将结果存入指定的缓存中。其他方法可以直接从响应的缓存中读取缓存数据，而不需要再去查询数据库。一般用在新增和更新方法上。属性值如下：</p>
+<table>
+<thead>
+<tr>
+<th align="left">属性名</th>
+<th align="left">解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">value</td>
+<td align="left">缓存名，必填，它指定了你的缓存存放在哪块命名空间</td>
+</tr>
+<tr>
+<td align="left">cacheNames</td>
+<td align="left">与 value 差不多，二选一即可</td>
+</tr>
+<tr>
+<td align="left">key</td>
+<td align="left">缓存的 key，可以为空，如果指定要按照 <strong>SpEL</strong> 表达式编写，如果不指定，则缺省按照方法的所有参数进行组合</td>
+</tr>
+<tr>
+<td align="left">keyGenerator</td>
+<td align="left">缓存数据时key生成策略，与key属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheManager</td>
+<td align="left">指定自定义CacheManager的名称，与cacheResolver属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheResolver</td>
+<td align="left">指定自定义的CacheResolver名称</td>
+</tr>
+<tr>
+<td align="left">condition</td>
+<td align="left">缓存的条件，可以为空，表示方法结果始终被缓存。而使用<strong>SpEL</strong> 编写，返回 true 或者 false，只有为 true 才进行缓存&#x2F;清除缓存，在<strong>调用方法之前之后</strong>都能判断</td>
+</tr>
+<tr>
+<td align="left">unless</td>
+<td align="left">用于否决缓存的，不像condition，该表达式只在<strong>方法执行之后</strong>判断，此时可以拿到返回值result进行判 断。条件为true不会缓存，fasle才缓存</td>
+</tr>
+</tbody></table>
+<p><strong>@CacheEvict</strong><br>使用该注解标志的方法，会清空指定的缓存。一般用在更新或者删除方法上，属性值如下：</p>
+<table>
+<thead>
+<tr>
+<th align="left">属性名</th>
+<th align="left">解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">value</td>
+<td align="left">缓存名，必填，它指定了你的缓存存放在哪块命名空间</td>
+</tr>
+<tr>
+<td align="left">cacheNames</td>
+<td align="left">与 value 差不多，二选一即可</td>
+</tr>
+<tr>
+<td align="left">key</td>
+<td align="left">缓存的 key，可以为空，如果指定要按照 <strong>SpEL</strong> 表达式编写，如果不指定，则缺省按照方法的所有参数进行组合</td>
+</tr>
+<tr>
+<td align="left">keyGenerator</td>
+<td align="left">缓存数据时key生成策略，与key属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheManager</td>
+<td align="left">指定自定义CacheManager的名称，与cacheResolver属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheResolver</td>
+<td align="left">指定自定义的CacheResolver名称</td>
+</tr>
+<tr>
+<td align="left">condition</td>
+<td align="left">缓存的条件，可以为空，表示方法结果始终被缓存。而使用 <strong>SpEL</strong> 编写，返回 true 或者 false，只有为 true 才进行缓存&#x2F;清除缓存，在<strong>调用方法之前之后</strong>都能判断</td>
+</tr>
+<tr>
+<td align="left">allEntries</td>
+<td align="left">是否清空所有缓存内容，缺省为 false。如果指定为 true，则方法调用后将立即清空所有缓存。<br><strong>注意不允许将此参数设置为true并指定一个key</strong></td>
+</tr>
+<tr>
+<td align="left">beforeInvocation</td>
+<td align="left">是否在方法执行前就清空，缺省为 false。缺省情况下，如果方法执行<strong>抛出异常</strong>，则不会清空缓存。如果指定 为 true，则在方法还没有执行的时候就清空缓存。</td>
+</tr>
+</tbody></table>
+<p><strong>@Caching</strong><br>不同或相同类型的缓存注释的组注释，用于定制复杂的缓存规则。</p>
+<table>
+<thead>
+<tr>
+<th align="left">属性名</th>
+<th align="left">解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">cacheable</td>
+<td align="left">默认为空，可以定义一个或多个@Cacheable</td>
+</tr>
+<tr>
+<td align="left">put</td>
+<td align="left">默认为空，可以定义一个或多个@CachePut</td>
+</tr>
+<tr>
+<td align="left">evict</td>
+<td align="left">默认为空，可以定义一个或多个@CacheEvict</td>
+</tr>
+</tbody></table>
+<p><strong>@CacheConfig</strong><br>用于标注在类上，可以存放该类中所有缓存的公有属性，比如设置缓存的名字。</p>
+<table>
+<thead>
+<tr>
+<th align="left">属性名</th>
+<th align="left">解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">cacheNames</td>
+<td align="left">与 value 差不多，二选一即可</td>
+</tr>
+<tr>
+<td align="left">keyGenerator</td>
+<td align="left">缓存数据时key生成策略，与key属性互斥</td>
+</tr>
+<tr>
+<td align="left">cacheManager</td>
+<td align="left">指定自定义CacheManager的名称，如果没有设置cacheResolver，并且在类中的缓存注解未设置缓存解析器和缓存管理器，则使用该管理器而不是默认值。</td>
+</tr>
+<tr>
+<td align="left">cacheResolver</td>
+<td align="left">指定自定义CacheResolver的名称，如果在类中的缓存注解没有设置解析器和缓存管理器，则使用此解析器而不是默认值。</td>
+</tr>
+</tbody></table>
+<h3 id="SpEL"><a href="#SpEL" class="headerlink" title="SpEL"></a>SpEL</h3><table>
+<thead>
+<tr>
+<th align="left">名字</th>
+<th align="left">位置</th>
+<th align="left">描述</th>
+<th align="left">示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">methodName</td>
+<td align="left">root object</td>
+<td align="left">当前被调用的方法名</td>
+<td align="left">#root.methodName</td>
+</tr>
+<tr>
+<td align="left">method</td>
+<td align="left">root object</td>
+<td align="left">当前被调用的方法</td>
+<td align="left">#root.method.name</td>
+</tr>
+<tr>
+<td align="left">target</td>
+<td align="left">root object</td>
+<td align="left">当前被调用的目标对象</td>
+<td align="left">#root.target</td>
+</tr>
+<tr>
+<td align="left">targetClass</td>
+<td align="left">root object</td>
+<td align="left">当前被调用的目标对象类</td>
+<td align="left">#root.targetClass</td>
+</tr>
+<tr>
+<td align="left">args</td>
+<td align="left">root object</td>
+<td align="left">当前被调用的方法的参数列表</td>
+<td align="left">#root.args[0] 表示参数列表第一个参数</td>
+</tr>
+<tr>
+<td align="left">caches</td>
+<td align="left">root object</td>
+<td align="left">当前方法调用使用的缓存列表（如@Cacheable(value&#x3D;{“cache1”, “cache2”})），<br>则有两个cache</td>
+<td align="left">#root.caches[0].name，取缓存列<br>表中第一个缓存名称</td>
+</tr>
+<tr>
+<td align="left">argument name</td>
+<td align="left">evaluation context(上下文)</td>
+<td align="left">方法参数的名字. 可以直接 #参数名 ，也可以使用 #p0或#a0 的 形式，0代表参数的索引；</td>
+<td align="left">#id、#p0,#a0</td>
+</tr>
+<tr>
+<td align="left">result</td>
+<td align="left">evaluation context</td>
+<td align="left">方法执行后的返回值（仅当方法执行之后的判断有效，如 ‘unless’，’cache put’的表达式 ’cache evict’的属性beforeInvocation&#x3D;false</td>
+<td align="left">#result，#result.id(返回结果的属性名)</td>
+</tr>
+</tbody></table>
+<h2 id="使用RestTemplate操作redis"><a href="#使用RestTemplate操作redis" class="headerlink" title="使用RestTemplate操作redis"></a>使用RestTemplate操作redis</h2><p>1.redisTemplate.opsForValue();&#x2F;&#x2F;操作字符串 </p>
+<p>2.redisTemplate.opsForHash();&#x2F;&#x2F;操作hash </p>
+<p>3.redisTemplate.opsForList();&#x2F;&#x2F;操作list </p>
+<p>4.redisTemplate.opsForSet();&#x2F;&#x2F;操作set </p>
+<p>5.redisTemplate.opsForZSet();&#x2F;&#x2F;操作有序set </p>
+<p>其他操作不一一列举</p>
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>首先我们先编写一个小Demo，我持久化层使用的是mybatis,这里代码很简单，就直接越过。</p>
+<p><img src="https://img-blog.csdnimg.cn/20200920212145547.png#pic_left"><br>然后看一下我们service层代码，在方法上添加了@Cacheable注解</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">DepartmentService</span> &#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> DepartmentMapper departmentMapper;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Cacheable(cacheNames = &quot;dep&quot;,key = &quot;#id&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> Department <span class="title function_">getDep</span><span class="params">(Integer id)</span>&#123;</span><br><span class="line">        <span class="type">Department</span> <span class="variable">byId</span> <span class="operator">=</span> departmentMapper.getById(id);</span><br><span class="line">        <span class="keyword">return</span> byId;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编写测试方法，看打印的日志结果</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line">   <span class="keyword">void</span> <span class="title function_">contextLoads</span><span class="params">()</span> &#123;</span><br><span class="line">       <span class="type">Department</span> <span class="variable">dep</span> <span class="operator">=</span> departmentService.getDep(<span class="number">1</span>);</span><br><span class="line">       System.out.println(dep);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>第一次执行从数据库里查数据，日志打印出SQL语句<br><img src="https://img-blog.csdnimg.cn/20200920212903368.png#pic_left"><br>第二次执行，日志没有打印SQL语句，说明是从redis缓存取数据<br><img src="https://img-blog.csdnimg.cn/20200920213756625.png?t_70#pic_left"><br>而我们也可以打开Redis Desktop Manager查看，数据的确存进缓存中了<br><img src="https://img-blog.csdnimg.cn/20200920213949479.png?t_70#pic_left"></p>
+
+        </div>
+
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+<nav class="article-nav">
+  
+    <a href="/2022/05/10/spring-start-event/" id="article-nav-newer" class="article-nav-link-wrap">
+      <div class="article-nav-caption">下一篇</div>
+      <div class="article-nav-title">
+        
+          SpringBoot启动完成前后执行某个方法
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2022/05/09/spring-read-resource/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-caption">上一篇</div>
+      <div class="article-nav-title">Spring项目的resources目录下的文件读取</div>
+    </a>
+  
+</nav>
+
+
+    <section class="share">
+        <div class="share-title">分享</div>
+        <a class="share-item" target="_blank"
+            href="https://twitter.com/share?text=SpringBoot整合redis - ReLive27的博客&url=https%3A%2F%2Frelive27.github.io%2F2022%2F05%2F10%2Fspringboot-integrate-redis%2F">
+            <box-icon type='logo' name='twitter'></box-icon>
+        </a>
+        <a class="share-item" target="_blank"
+            href="https://www.facebook.com/sharer.php?title=SpringBoot整合redis - ReLive27的博客&u=https%3A%2F%2Frelive27.github.io%2F2022%2F05%2F10%2Fspringboot-integrate-redis%2F">
+            <box-icon name='facebook-square' type='logo' ></box-icon>
+        </a>
+        <!-- <a class="share-item" target="_blank"
+            href="https://service.weibo.com/share/share.php?title=SpringBoot整合redis - ReLive27的博客&url=https://relive27.github.io/2022/05/10/springboot-integrate-redis/&pic=">
+            <div class="n-icon n-icon-weibo"></div>
+        </a> -->
+    </section>
+
+</article>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+                </section>
+            </section>
+
+            
+            <aside class="sidebar ">
+                
+
+
+<div class="widget" id="widget">
+    
+      
+  <div class="widget-wrap">
+    <div class="widget-inner">
+      <div class="toc post-toc-html"></div>
+    </div>
+  </div>
+
+    
+      
+  <div class="widget-wrap widget-cate">
+    <div class="widget-title"><span>Categories</span></div>
+    <div class="widget-inner">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/springboot/">springboot</a></li></ul>
+    </div>
+  </div>
+
+
+    
+      
+  <div class="widget-wrap widget-tags">
+    <div class="widget-title"><span>Tags</span></div>
+    <div class="widget-inner">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/SpringBoot/" rel="tag">SpringBoot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/redis/" rel="tag">redis</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springboot/" rel="tag">springboot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springmvc/" rel="tag">springmvc</a></li></ul>
+    </div>
+  </div>
+
+
+    
+      
+  <div class="widget-wrap widget-recent-posts">
+    <div class="widget-title"><span>Recent Posts</span></div>
+    <div class="widget-inner">
+      <ul>
+        
+          <li>
+            <a href="/2022/05/10/spring-start-event/">SpringBoot启动完成前后执行某个方法</a>
+          </li>
+        
+          <li>
+            <a href="/2022/05/10/springboot-integrate-redis/">SpringBoot整合redis</a>
+          </li>
+        
+          <li>
+            <a href="/2022/05/09/spring-read-resource/">Spring项目的resources目录下的文件读取</a>
+          </li>
+        
+          <li>
+            <a href="/2022/05/09/spring-mvc-annotation/">注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+    
+      
+  <div class="widget-wrap widget-archive">
+    <div class="widget-title"><span>Archive</span></div>
+    <div class="widget-inner">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2022/">2022</a></li></ul>
+    </div>
+  </div>
+
+
+    
+</div>
+
+<div id="backtop"><i class="icon icon-arrow-up"></i></div>
+            </aside>
+            
+        </div>
+    </div>
+
+    <footer class="footer">
+    <div class="footer-wave">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="#3c4859" fill-opacity="1" d="M0,160L60,181.3C120,203,240,245,360,240C480,235,600,181,720,186.7C840,192,960,256,1080,261.3C1200,267,1320,213,1380,186.7L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path></svg>
+    </div>
+
+    <!-- Please do not remove this -->
+    <!-- 开源不易，请勿删除 -->
+    <div class="footer-wrap">
+        <div class="footer-inner"> 
+            ReLive27的博客 &copy; 2022<br>
+            Powered By Hexo · Theme By <a href="https://linhong.me/" target="_blank">Aomori</a> · <a href="https://github.com/lh1me/hexo-theme-aomori" target="_blank">Github</a>
+        </div>
+    </div>
+
+</footer>
+
+
+
+
+
+
+<script src="/dist/build.js?1651727875408.js"></script>
+
+
+<script src="/dist/custom.js?1651727875408.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>

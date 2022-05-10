@@ -138,7 +138,7 @@
             <section class="inner">
                 <section class="inner-main">
                     <div class="post">
-    <article id="post-cl2yq8u7u0001huuzcqgjckp7" class="article article-type-post" itemscope
+    <article id="post-cl305apft0000ktuze4qwbxsl" class="article article-type-post" itemscope
     itemprop="blogPost">
 
     <div class="article-inner">
@@ -217,7 +217,6 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">File</span> <span class="variable">file</span> <span class="operator">=</span> ResourceUtils.getFile(<span class="string">&quot;src/main/resources/3.png&quot;</span>);</span><br><span class="line">InputStream fis=<span class="keyword">new</span> <span class="title class_">FileInputStream</span>(file);</span><br><span class="line">OutputStream fos=<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;E://3.png&quot;</span>);</span><br><span class="line"><span class="type">int</span> len=<span class="number">0</span>;</span><br><span class="line"><span class="type">byte</span>[] buf=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">while</span>((len=fis.read(buf,<span class="number">0</span>,buf.length))!=-<span class="number">1</span>)&#123;</span><br><span class="line">    fos.write(buf,<span class="number">0</span>,len);</span><br><span class="line">&#125;</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></table></figure>
 
 
-
         </div>
 
     </div>
@@ -234,6 +233,15 @@
 
     
 <nav class="article-nav">
+  
+    <a href="/2022/05/10/springboot-integrate-redis/" id="article-nav-newer" class="article-nav-link-wrap">
+      <div class="article-nav-caption">下一篇</div>
+      <div class="article-nav-title">
+        
+          SpringBoot整合redis
+        
+      </div>
+    </a>
   
   
     <a href="/2022/05/09/spring-mvc-annotation/" id="article-nav-older" class="article-nav-link-wrap">
@@ -310,7 +318,7 @@
   <div class="widget-wrap widget-tags">
     <div class="widget-title"><span>Tags</span></div>
     <div class="widget-inner">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/springboot/" rel="tag">springboot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springmvc/" rel="tag">springmvc</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/SpringBoot/" rel="tag">SpringBoot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/redis/" rel="tag">redis</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springboot/" rel="tag">springboot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/springmvc/" rel="tag">springmvc</a></li></ul>
     </div>
   </div>
 
@@ -321,6 +329,14 @@
     <div class="widget-title"><span>Recent Posts</span></div>
     <div class="widget-inner">
       <ul>
+        
+          <li>
+            <a href="/2022/05/10/spring-start-event/">SpringBoot启动完成前后执行某个方法</a>
+          </li>
+        
+          <li>
+            <a href="/2022/05/10/springboot-integrate-redis/">SpringBoot整合redis</a>
+          </li>
         
           <li>
             <a href="/2022/05/09/spring-read-resource/">Spring项目的resources目录下的文件读取</a>
