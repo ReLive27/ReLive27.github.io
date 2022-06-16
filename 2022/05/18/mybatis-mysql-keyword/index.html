@@ -2,7 +2,7 @@
 <html class="has-navbar-fixed-top">
 <head>
     <meta charset="utf-8">
-<title>标签: springmvc - ReLive27的博客</title>
+<title>Mybatis-plus遇到MySQL关键字如何解决 - ReLive27的博客</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
@@ -16,12 +16,15 @@
 
 
 
-    <meta property="og:type" content="website">
-<meta property="og:title" content="ReLive27的博客">
-<meta property="og:url" content="https://relive27.github.io/tags/springmvc/index.html">
+    <meta property="og:type" content="article">
+<meta property="og:title" content="Mybatis-plus遇到MySQL关键字如何解决">
+<meta property="og:url" content="https://relive27.github.io/2022/05/18/mybatis-mysql-keyword/index.html">
 <meta property="og:site_name" content="ReLive27的博客">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-05-18T09:33:52.000Z">
+<meta property="article:modified_time" content="2022-05-27T05:00:38.355Z">
 <meta property="article:author" content="ReLive27">
+<meta property="article:tag" content="Mybatis">
 <meta name="twitter:card" content="summary">
 
 
@@ -119,59 +122,77 @@
     </div>
 </nav>
 
-    <section class="section section-heading">
+    <section class="section">
     <div class="container">
-        <div class="content">
-            <h5>#springmvc</h5>
-        </div>
-    </div>
-</section>
-<section class="section">
-    <div class="container">
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
+    <article class="article content gallery" itemscope itemprop="blogPost">
     <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
         
-            <a href="/2022/05/09/spring-mvc-annotation/" itemprop="url">注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</a>
+            Mybatis-plus遇到MySQL关键字如何解决
         
     </h1>
     <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
         <span class="column is-narrow">
             
-                <time datetime="2022-05-09T04:13:37.000Z" itemprop="datePublished">5月 9 2022</time>
+                <time datetime="2022-05-18T09:33:52.000Z" itemprop="datePublished">5月 18 2022</time>
             
         </span>
         
         <span class="column is-narrow article-category">
             <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/springboot/">springboot</a>
+            <a class="article-category-link" href="/categories/Mybatis/">Mybatis</a>
         </span>
         
         
         <span class="column is-narrow">
             
             
-            5 分钟 读完 (约 757 字)
+            2 分钟 读完 (约 232 字)
         </span>
         
     </div>
     <div class="article-entry is-size-6-mobile" itemprop="articleBody">
     
-        <!-- SpringMVC --><html><head></head><body></body></html>
-        <p class="article-more-link">
-            <a href="/2022/05/09/spring-mvc-annotation/#more">阅读更多</a>
-        </p>
+        <!-- mybatis--><html><head></head><body><span id="more"></span>
+
+<h2 id="Mybatis-plus遇到MySQL关键字如何解决"><a href="#Mybatis-plus遇到MySQL关键字如何解决" class="headerlink" title="Mybatis-plus遇到MySQL关键字如何解决"></a>Mybatis-plus遇到MySQL关键字如何解决</h2><p>在我们开发中经常会遇到在实体类中某个字段是MySQL的关键字，例如：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@TableName</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">User</span> {</span><br><span class="line">  <span class="hljs-keyword">private</span> Long id;</span><br><span class="line">  <span class="hljs-keyword">private</span> String username;</span><br><span class="line">  <span class="hljs-keyword">private</span> String describe;</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>在我们使用Mybatis查询是会遇到报错，提示信息：</p>
+<figure class="highlight plaintext hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'describe from user' at line 1, Time: 0.009000s</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这是因为Mybatis在执行sql时并没有将查询字段并没有通过**``**符号，所以MySQL会把describe当作关键字。</p>
+<p>首先遇到这种情况，一我们可以更改字段名避免使用MySQL的关键字；二如果字段名不方便修改，那么我们可以使用<code>@TableField</code>显示的将字段使用**``**。修改后实体类如下：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@TableName</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">User</span> {</span><br><span class="line">  <span class="hljs-keyword">private</span> Long id;</span><br><span class="line">  <span class="hljs-keyword">private</span> String username;</span><br><span class="line">  <span class="hljs-meta">@TableName("`describe`")</span></span><br><span class="line">  <span class="hljs-keyword">private</span> String describe;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</body></html>
     
     </div>
     
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/Mybatis/">#Mybatis</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/2022/06/12/java-weekly-1/">Java Weekly 第1期</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/2022/05/15/factory-pattern/">设计模式-工厂方法模式</a>
+            
+        </span>
+    </div>
     
 </article>
 
 
 
 
-    
-    
     </div>
 </section>
     <footer class="footer">
