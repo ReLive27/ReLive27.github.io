@@ -22,7 +22,7 @@
 <meta property="og:site_name" content="ReLive27的博客">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-05-09T12:50:16.000Z">
-<meta property="article:modified_time" content="2022-05-10T12:33:38.888Z">
+<meta property="article:modified_time" content="2022-06-19T14:09:06.032Z">
 <meta property="article:author" content="ReLive27">
 <meta property="article:tag" content="springboot">
 <meta name="twitter:card" content="summary">
@@ -146,7 +146,7 @@
         <span class="column is-narrow">
             
             
-            4 分钟 读完 (约 610 字)
+            4 分钟 读完 (约 653 字)
         </span>
         
     </div>
@@ -183,6 +183,7 @@
 <p><strong>5.</strong> 使用<strong>org.springframework.util.ResourceUtils</strong> 读取，只能在开发环境中读取，不能再生产环境中读取(Linux下jar包运行读取)。</p>
 <figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-type">File</span> <span class="hljs-variable">file</span> <span class="hljs-operator">=</span> ResourceUtils.getFile(<span class="hljs-string">"src/main/resources/3.png"</span>);</span><br><span class="line">InputStream fis=<span class="hljs-keyword">new</span> <span class="title class_">FileInputStream</span>(file);</span><br><span class="line">OutputStream fos=<span class="hljs-keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="hljs-string">"E://3.png"</span>);</span><br><span class="line"><span class="hljs-type">int</span> len=<span class="hljs-number">0</span>;</span><br><span class="line"><span class="hljs-type">byte</span>[] buf=<span class="hljs-keyword">new</span> <span class="title class_">byte</span>[<span class="hljs-number">1024</span>];</span><br><span class="line"><span class="hljs-keyword">while</span>((len=fis.read(buf,<span class="hljs-number">0</span>,buf.length))!=-<span class="hljs-number">1</span>){</span><br><span class="line">    fos.write(buf,<span class="hljs-number">0</span>,len);</span><br><span class="line">}</span><br><span class="line">fos.close();</span><br><span class="line">fis.close();</span><br></pre></td></tr></tbody></table></figure>
 
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>与往常一样，本文中使用的源代码可<a target="_blank" rel="noopener" href="https://github.com/ReLive27/spring-boot-sample/blob/master/spring-static-resource/src/main/java/com/relive/ResourceFileReader.java">在 GitHub 上</a>获得。</p>
 </body></html>
     
     </div>
@@ -219,7 +220,7 @@
         <div class="columns content">
             <div class="column is-narrow has-text-centered">
                 &copy; 2022 ReLive27&nbsp;
-                Разработано на базе <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
                         target="_blank" rel="noopener" href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
             </div>
             <div class="column is-hidden-mobile"></div>
