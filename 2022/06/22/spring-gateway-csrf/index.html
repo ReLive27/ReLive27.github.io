@@ -2,7 +2,7 @@
 <html class="has-navbar-fixed-top">
 <head>
     <meta charset="utf-8">
-<title>标签: SpringBoot - ReLive27的博客</title>
+<title>SpringGateway使用SpringSecurity防止CSRF攻击 - ReLive27的博客</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
@@ -16,12 +16,15 @@
 
 
 
-    <meta property="og:type" content="website">
-<meta property="og:title" content="ReLive27的博客">
-<meta property="og:url" content="https://relive27.github.io/tags/SpringBoot/index.html">
+    <meta property="og:type" content="article">
+<meta property="og:title" content="SpringGateway使用SpringSecurity防止CSRF攻击">
+<meta property="og:url" content="https://relive27.github.io/2022/06/22/spring-gateway-csrf/index.html">
 <meta property="og:site_name" content="ReLive27的博客">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-06-22T10:49:48.000Z">
+<meta property="article:modified_time" content="2022-06-22T10:53:32.926Z">
 <meta property="article:author" content="ReLive27">
+<meta property="article:tag" content="spring cloud">
 <meta name="twitter:card" content="summary">
 
 
@@ -119,59 +122,74 @@
     </div>
 </nav>
 
-    <section class="section section-heading">
+    <section class="section">
     <div class="container">
-        <div class="content">
-            <h5>#SpringBoot</h5>
-        </div>
-    </div>
-</section>
-<section class="section">
-    <div class="container">
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
+    <article class="article content gallery" itemscope itemprop="blogPost">
     <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
         
-            <a href="/2022/05/10/springboot-integrate-redis/" itemprop="url">SpringBoot整合redis</a>
+            SpringGateway使用SpringSecurity防止CSRF攻击
         
     </h1>
     <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
         <span class="column is-narrow">
             
-                <time datetime="2022-05-10T12:23:20.000Z" itemprop="datePublished">5月 10 2022</time>
+                <time datetime="2022-06-22T10:49:48.000Z" itemprop="datePublished">6月 22 2022</time>
             
         </span>
         
         <span class="column is-narrow article-category">
             <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/springboot/">springboot</a>
+            <a class="article-category-link" href="/categories/SpringCloud/">SpringCloud</a>
         </span>
         
         
         <span class="column is-narrow">
             
             
-            17 分钟 读完 (约 2563 字)
+            2 分钟 读完 (约 342 字)
         </span>
         
     </div>
     <div class="article-entry is-size-6-mobile" itemprop="articleBody">
     
-        <!--redis--><html><head></head><body></body></html>
-        <p class="article-more-link">
-            <a href="/2022/05/10/springboot-integrate-redis/#more">阅读更多</a>
-        </p>
+        <!-- spring gateway csrf --><html><head></head><body><span id="more"></span>
+
+<h2 id="SpringGateway使用SpringSecurity防止CSRF攻击"><a href="#SpringGateway使用SpringSecurity防止CSRF攻击" class="headerlink" title="SpringGateway使用SpringSecurity防止CSRF攻击"></a>SpringGateway使用SpringSecurity防止CSRF攻击</h2><h3 id="配置CSRF保护"><a href="#配置CSRF保护" class="headerlink" title="配置CSRF保护"></a>配置CSRF保护</h3><figure class="highlight plaintext hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">@Bean</span><br><span class="line">public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {</span><br><span class="line">	http</span><br><span class="line">		.csrf(csrf -&gt; csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse()))</span><br><span class="line">	return http.build();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>以上通过Cookie持久化<code>XSRF-TOKEN</code>值，jS读取cookie中的值发起请求时需携带<code>X-XSRF-TOKEN</code><br>请求头，默认情况GET，HEAD，TRACE，OPTIONS请求方式是放行的，具体实现在<code>DefaultRequireCsrfProtectionMatcher</code><br>类。如果需要特殊定制，可以自定义实现类实现<code>ServerWebExchangeMatcher</code>,并替换默认<code>DefaultRequireCsrfProtectionMatcher</code>:</p>
+<figure class="highlight plaintext hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@Bean</span><br><span class="line">  public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {</span><br><span class="line">      http</span><br><span class="line">              .csrf(csrf -&gt; csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())</span><br><span class="line">                      .requireCsrfProtectionMatcher(new CustomServerWebExchangeMatcher());</span><br><span class="line">      return http.build();</span><br><span class="line">  }</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="CookieServerCsrfTokenRepository-does-not-add-cookie"><a href="#CookieServerCsrfTokenRepository-does-not-add-cookie" class="headerlink" title="CookieServerCsrfTokenRepository does not add cookie"></a>CookieServerCsrfTokenRepository does not add cookie</h3><p>在我们按照上述配置分别测试GET请求和POST请求时，发现GET请求响应cookie中并没有<code>XSRF-TOKEN</code>，原因在响应式编程中<code>CsrfToken</code><br>并没有被订阅。具体问题解析在<a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-security/issues/5766">Spring Security issues中找到答案</a>；<br>最后也提供了解决方式：</p>
+<figure class="highlight plaintext hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j</span><br><span class="line">@Component</span><br><span class="line">public class CsrfHelperFilter implements WebFilter {</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, WebFilterChain chain) {</span><br><span class="line">        String key = CsrfToken.class.getName();</span><br><span class="line">        Mono&lt;CsrfToken&gt; csrfToken = null != exchange.getAttribute(key) ? exchange.getAttribute(key) : Mono.empty();</span><br><span class="line">        return csrfToken.doOnSuccess(token -&gt; {</span><br><span class="line">            ResponseCookie cookie = ResponseCookie.from("XSRF-TOKEN", token.getToken()).maxAge(Duration.ofHours(1))</span><br><span class="line">                    .httpOnly(false).path("/").build();</span><br><span class="line">            log.debug("Cookie: {}", cookie);</span><br><span class="line">            exchange.getResponse().getCookies().add("XSRF-TOKEN", cookie);</span><br><span class="line">        }).then(chain.filter(exchange));</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>与往常一样，本文中使用的源代码可<a target="_blank" rel="noopener" href="https://github.com/ReLive27/spring-cloud-sample/tree/master/spring-cloud-gateway-sample/spring-cloud-gateway-csrf">在 GitHub 上</a>获得。</p>
+</body></html>
     
     </div>
     
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/spring-cloud/">#spring cloud</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/2022/06/12/java-weekly-1/">Java Weekly 第1期</a>
+            
+        </span>
+    </div>
     
 </article>
 
 
 
 
-    
-    
     </div>
 </section>
     <footer class="footer">
