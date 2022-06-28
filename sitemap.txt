@@ -17,14 +17,14 @@ https://relive27.github.io/tags/OAuth2/
 https://relive27.github.io/tags/ssh/
 https://relive27.github.io/tags/mybatis/
 https://relive27.github.io/tags/spring-cloud/
-https://relive27.github.io/tags/spring-boot/
 https://relive27.github.io/tags/spring-mvc/
+https://relive27.github.io/tags/spring-boot/
 https://relive27.github.io/tags/JWT/
 https://relive27.github.io/tags/redis/
-https://relive27.github.io/categories/weekly/
 https://relive27.github.io/categories/SpringSecurity/
 https://relive27.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/
 https://relive27.github.io/categories/java/
+https://relive27.github.io/categories/weekly/
 https://relive27.github.io/categories/Mybatis/
 https://relive27.github.io/categories/SpringCloud/
 https://relive27.github.io/categories/SpringBoot/
