@@ -18,18 +18,18 @@
 
     <meta property="og:type" content="article">
 <meta property="og:title" content="Spring Security OAuth2登录">
-<meta property="og:url" content="https://relive27.github.io/2022/07/18/oauth2-login/index.html">
+<meta property="og:url" content="https://relive27.github.io/2022/07/25/oauth2-login/index.html">
 <meta property="og:site_name" content="ReLive27的博客">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://relive27.github.io/2022/07/18/oauth2-login/form-login-home.png">
-<meta property="og:image" content="https://relive27.github.io/2022/07/18/oauth2-login/oauth2-login-home.png">
-<meta property="article:published_time" content="2022-07-18T07:01:01.000Z">
-<meta property="article:modified_time" content="2022-07-25T12:55:57.331Z">
+<meta property="og:image" content="https://relive27.github.io/2022/07/25/oauth2-login/form-login-home.png">
+<meta property="og:image" content="https://relive27.github.io/2022/07/25/oauth2-login/oauth2-login-home.png">
+<meta property="article:published_time" content="2022-07-25T12:01:01.000Z">
+<meta property="article:modified_time" content="2022-07-25T12:57:12.824Z">
 <meta property="article:author" content="ReLive27">
 <meta property="article:tag" content="spring security">
 <meta property="article:tag" content="OAuth2">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://relive27.github.io/2022/07/18/oauth2-login/form-login-home.png">
+<meta name="twitter:image" content="https://relive27.github.io/2022/07/25/oauth2-login/form-login-home.png">
 
 
 
@@ -137,7 +137,7 @@
     <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
         <span class="column is-narrow">
             
-                <time datetime="2022-07-18T07:01:01.000Z" itemprop="datePublished">7月 18 2022</time>
+                <time datetime="2022-07-25T12:01:01.000Z" itemprop="datePublished">7月 25 2022</time>
             
         </span>
         
@@ -296,9 +296,9 @@
 
 
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>我们启动服务后，访问<a target="_blank" rel="noopener" href="http://127.0.0.1:8070/login%EF%BC%8C">http://127.0.0.1:8070/login，</a> 首先使用用户名密码登录，您将会看到：</p>
-<p><img src="/2022/07/18/oauth2-login/form-login-home.png"></p>
+<p><img src="/2022/07/25/oauth2-login/form-login-home.png"></p>
 <p>之后我们退出登录使，用OAuth2 登录，您将会看到不同信息：</p>
-<p><img src="/2022/07/18/oauth2-login/oauth2-login-home.png"></p>
+<p><img src="/2022/07/25/oauth2-login/oauth2-login-home.png"></p>
 <h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>我们使用OAuth2.0 授权协议上构建身份认证证明是可行的。但是我们不能忽略在这之间的陷阱。</p>
 <ol>
 <li><p>令牌本身并不传递有关身份认证事件的信息。令牌可能是直接颁发给客户端的，使用的是无须用户交互的 OAuth 2.0 客户端凭据模式。</p>
