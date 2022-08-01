@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Spring Security和OpenID Connect - ReLive27的博客</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+<meta name="description" content="">
+
+
+
+
+
+    <meta property="og:type" content="article">
+<meta property="og:title" content="Spring Security和OpenID Connect">
+<meta property="og:url" content="https://relive27.github.io/2022/08/01/springn-security-oidc/index.html">
+<meta property="og:site_name" content="ReLive27的博客">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://relive27.github.io/2022/08/01/springn-security-oidc/oauth2_sql_model.png">
+<meta property="article:published_time" content="2022-08-01T12:35:28.000Z">
+<meta property="article:modified_time" content="2022-08-01T13:21:59.918Z">
+<meta property="article:author" content="ReLive27">
+<meta property="article:tag" content="spring security">
+<meta property="article:tag" content="OAuth2">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://relive27.github.io/2022/08/01/springn-security-oidc/oauth2_sql_model.png">
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/lightgallery/1.6.8/css/lightgallery.min.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/justifiedGallery/3.6.5/css/justifiedGallery.min.css">
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+
+<link rel="stylesheet" href="/css/style.css">
+
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<meta name="generator" content="Hexo 6.1.0"><link rel="alternate" href="/atom.xml" title="ReLive27的博客" type="application/atom+xml">
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                <img src="/images/logo.png" alt="" height="28">
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">从这里开始</a>
+            
+            <a class="navbar-item "
+               href="/archives">完整档案</a>
+            
+            <a class="navbar-item "
+               href="/tags">标签</a>
+            
+            <a class="navbar-item "
+               href="/categories">分类</a>
+            
+            <a class="navbar-item "
+               href="/categories/weekly/">Weekly</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="搜索" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+            <a class="navbar-item" title="GitHub" target="_blank" rel="noopener" href="https://github.com/ReLive27">
+                
+                <i class="fab fa-github"></i>
+                
+            </a>
+               
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Spring Security和OpenID Connect
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            
+                <time datetime="2022-08-01T12:35:28.000Z" itemprop="datePublished">8月 1 2022</time>
+            
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/SpringSecurity/">SpringSecurity</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            17 分钟 读完 (约 2613 字)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <!-- spring security idc --><html><head></head><body><span id="more"></span>
+
+<h2 id="Spring-Security和OpenID-Connect"><a href="#Spring-Security和OpenID-Connect" class="headerlink" title="Spring Security和OpenID Connect"></a>Spring Security和OpenID Connect</h2><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>OpenID Connect 是一个开放标准，由 OpenID 基金会于 2014 年 2 月发布。它定义了一种使用 OAuth 2.0 执行用户身份认证的互通方式。OpenID Connect 直接基于 OAuth 2.0 构建，并保持与它兼容。</p>
+<p>当授权服务器支持 OIDC 时，它有时被称为<em>身份提供者（Idp）</em>，因为它向<strong>客户端</strong>提供有关<strong>资源所有者</strong>的信息。而<strong>客户端</strong>映射为OpenID Connect 流程中<em>登录依赖方（RP）</em>。在本文中我们将授权服务称为身份提供者，客户端称为登录依赖方进行陈述。</p>
+<p>OpenID Connect 流程看起来与 OAuth 相同。主要区别是，在授权请求中，使用了一个特定的范围<code>openid</code>，而在获取token中，<strong>登录依赖方（RP）</strong>同时接收到一个<strong>访问令牌</strong>和一个<strong>ID 令牌</strong>（经过签名的 JWT）。ID令牌与访问令牌不同的是，ID 令牌是发送给 RP 的，并且要被它解析。</p>
+<p><strong>本文您将学到</strong>：</p>
+<ul>
+<li>配置授权服务支持OpenID Connect</li>
+<li>自定义ID令牌</li>
+<li>登录依赖方通过<code>OAuth2UserService</code>实现权限映射</li>
+</ul>
+<p><strong>先决条件：</strong></p>
+<ul>
+<li>java 8+</li>
+<li>mysql</li>
+</ul>
+<h3 id="使用Spring-Authorization-Server搭建身份提供服务-IdP"><a href="#使用Spring-Authorization-Server搭建身份提供服务-IdP" class="headerlink" title="使用Spring Authorization Server搭建身份提供服务(IdP)"></a>使用Spring Authorization Server搭建身份提供服务(IdP)</h3><p>本节中我们将使用<a target="_blank" rel="noopener" href="https://spring.io/projects/spring-authorization-server">Spring Authorization Server</a>搭建身份提供服务，并通过<code>OAuth2TokenCustomizer</code>实现自定义ID Token。</p>
+<h4 id="maven-依赖项"><a href="#maven-依赖项" class="headerlink" title="maven 依赖项"></a>maven 依赖项</h4><figure class="highlight xml hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-security<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span></span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.security<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-security-oauth2-authorization-server<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>0.3.1<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span></span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-web<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span></span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h4><p>首先我们配置身份提供服务端口8080:</p>
+<figure class="highlight yaml hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">server:</span></span><br><span class="line">  <span class="hljs-attr">port:</span> <span class="hljs-number">8080</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>接下来我们创建<code>AuthorizationServerConfig</code>配置类，在此类中我们配置OAuth2及OICD相关Bean。我们首先注册一个客户端：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-keyword">public</span> RegisteredClientRepository <span class="title function_">registeredClientRepository</span><span class="hljs-params">()</span> {</span><br><span class="line">    <span class="hljs-type">RegisteredClient</span> <span class="hljs-variable">registeredClient</span> <span class="hljs-operator">=</span> RegisteredClient.withId(UUID.randomUUID().toString())</span><br><span class="line">            .clientId(<span class="hljs-string">"relive-client"</span>)</span><br><span class="line">            .clientSecret(<span class="hljs-string">"{noop}relive-client"</span>)</span><br><span class="line">            .clientAuthenticationMethods(s -&gt; {</span><br><span class="line">                s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);</span><br><span class="line">                s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);</span><br><span class="line">            })</span><br><span class="line">            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)</span><br><span class="line">            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)</span><br><span class="line">            .redirectUri(<span class="hljs-string">"http://127.0.0.1:8070/login/oauth2/code/messaging-client-oidc"</span>)</span><br><span class="line">            .scope(OidcScopes.OPENID)</span><br><span class="line">            .scope(OidcScopes.PROFILE)</span><br><span class="line">            .scope(OidcScopes.EMAIL)</span><br><span class="line">            .clientSettings(ClientSettings.builder()</span><br><span class="line">                    .requireAuthorizationConsent(<span class="hljs-literal">true</span>)</span><br><span class="line">                    .requireProofKey(<span class="hljs-literal">false</span>)</span><br><span class="line">                    .build())</span><br><span class="line">            .tokenSettings(TokenSettings.builder()</span><br><span class="line">                    .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED) </span><br><span class="line">                    .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)</span><br><span class="line">                    .accessTokenTimeToLive(Duration.ofSeconds(<span class="hljs-number">30</span> * <span class="hljs-number">60</span>))</span><br><span class="line">                    .refreshTokenTimeToLive(Duration.ofSeconds(<span class="hljs-number">60</span> * <span class="hljs-number">60</span>))</span><br><span class="line">                    .reuseRefreshTokens(<span class="hljs-literal">true</span>)</span><br><span class="line">                    .build())</span><br><span class="line">            .build();</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">InMemoryRegisteredClientRepository</span>(registeredClient);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们正在配置的属性是：</p>
+<ul>
+<li>clientId – Spring Security将使用它来识别哪个客户端正在尝试访问资源</li>
+<li>clientSecret——客户端和服务器都知道的一个秘密，它提供了两者之间的信任</li>
+<li>客户端验证方式——在我们的例子中，我们将支持basic和post身份验证方式</li>
+<li>授权类型——允许客户端生成授权码和刷新令牌</li>
+<li>重定向 URI – 客户端将在基于重定向的流程中使用它</li>
+<li>scope——此参数定义客户端可能拥有的权限。在我们的例子中，我们将拥有所需的<em>OidcScopes.OPENID</em>和用来获取额外的<em>身份</em>信息<em>OidcScopes.PROFILE</em>，<em>OidcScopes.EMAIL</em>。</li>
+</ul>
+<br>
+
+<p>OpenID Connect 使用一个特殊的权限范围值 openid 来控制对 UserInfo 端点的访问。 OpenID Connect 定义了一组标准化的 OAuth 权限范围，对应于用户属性的子集profile、email、 phone、address，参见表格：</p>
+<table>
+<thead>
+<tr>
+<th>权限范围</th>
+<th align="left">声明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>openid</strong></td>
+<td align="left"><strong>sub</strong></td>
+</tr>
+<tr>
+<td>profile</td>
+<td align="left">Name、family_name、given_name、middle_name、nickname、preferred_username、profile、 picture、website、gender、birthdate、zoneinfo、locale、updated_at</td>
+</tr>
+<tr>
+<td>email</td>
+<td align="left">email、email_verified</td>
+</tr>
+<tr>
+<td>address</td>
+<td align="left">address,是一个 JSON 对象、包含 formatted、street_address、locality、region、postal_code、country</td>
+</tr>
+<tr>
+<td>phone</td>
+<td align="left">phone_number、phone_number_verified</td>
+</tr>
+</tbody></table>
+<p>让我们根据上述规范定义<em>OidcUserInfoService</em>，用于扩展/userinfo用户信息端点响应：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">OidcUserInfoService</span> {</span><br><span class="line"></span><br><span class="line">    <span class="hljs-keyword">public</span> OidcUserInfo <span class="title function_">loadUser</span><span class="hljs-params">(String name, Set&lt;String&gt; scopes)</span> {</span><br><span class="line">        OidcUserInfo.<span class="hljs-type">Builder</span> <span class="hljs-variable">builder</span> <span class="hljs-operator">=</span> OidcUserInfo.builder().subject(name);</span><br><span class="line">        <span class="hljs-keyword">if</span> (!CollectionUtils.isEmpty(scopes)) {</span><br><span class="line">            <span class="hljs-keyword">if</span> (scopes.contains(OidcScopes.PROFILE)) {</span><br><span class="line">                builder.name(<span class="hljs-string">"First Last"</span>)</span><br><span class="line">                        .givenName(<span class="hljs-string">"First"</span>)</span><br><span class="line">                        .familyName(<span class="hljs-string">"Last"</span>)</span><br><span class="line">                        .middleName(<span class="hljs-string">"Middle"</span>)</span><br><span class="line">                        .nickname(<span class="hljs-string">"User"</span>)</span><br><span class="line">                        .preferredUsername(name)</span><br><span class="line">                        .profile(<span class="hljs-string">"http://127.0.0.1:8080/"</span> + name)</span><br><span class="line">                        .picture(<span class="hljs-string">"http://127.0.0.1:8080/"</span> + name + <span class="hljs-string">".jpg"</span>)</span><br><span class="line">                        .website(<span class="hljs-string">"http://127.0.0.1:8080/"</span>)</span><br><span class="line">                        .gender(<span class="hljs-string">"female"</span>)</span><br><span class="line">                        .birthdate(<span class="hljs-string">"2022-05-24"</span>)</span><br><span class="line">                        .zoneinfo(<span class="hljs-string">"China/Beijing"</span>)</span><br><span class="line">                        .locale(<span class="hljs-string">"zh-cn"</span>)</span><br><span class="line">                        .updatedAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE));</span><br><span class="line">            }</span><br><span class="line">            <span class="hljs-keyword">if</span> (scopes.contains(OidcScopes.EMAIL)) {</span><br><span class="line">                builder.email(name + <span class="hljs-string">"@163.com"</span>).emailVerified(<span class="hljs-literal">true</span>);</span><br><span class="line">            }</span><br><span class="line">            <span class="hljs-keyword">if</span> (scopes.contains(OidcScopes.ADDRESS)) {</span><br><span class="line">                <span class="hljs-type">JSONObject</span> <span class="hljs-variable">address</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="title class_">JSONObject</span>();</span><br><span class="line">                address.put(<span class="hljs-string">"address"</span>, Collections.singletonMap(<span class="hljs-string">"formatted"</span>, <span class="hljs-string">"Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance"</span>));</span><br><span class="line">                builder.address(address.toJSONString());</span><br><span class="line">            }</span><br><span class="line">            <span class="hljs-keyword">if</span> (scopes.contains(OidcScopes.PHONE)) {</span><br><span class="line">                builder.phoneNumber(<span class="hljs-string">"13728903134"</span>).phoneNumberVerified(<span class="hljs-string">"false"</span>);</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="hljs-keyword">return</span> builder.build();</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>接下来，我们将配置一个 bean 以应用默认 OAuth 安全性。使用上述<em>OidcUserInfoService</em>配置OIDC中UserInfoMapper；oauth2ResourceServer()配置资源服务器使用JWT验证，用来保护Spring Security 提供的/userinfo端点；对于未认证请求我们会将它重定向到/login 登录页：</p>
+<blockquote>
+<p>注意：有时“授权服务器”和“资源服务器”是同一台服务器。</p>
+</blockquote>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-meta">@Order(Ordered.HIGHEST_PRECEDENCE)</span></span><br><span class="line"><span class="hljs-keyword">public</span> SecurityFilterChain <span class="title function_">authorizationServerSecurityFilterChain</span><span class="hljs-params">(HttpSecurity http)</span> <span class="hljs-keyword">throws</span> Exception {</span><br><span class="line">    OAuth2AuthorizationServerConfigurer&lt;HttpSecurity&gt; authorizationServerConfigurer =</span><br><span class="line">            <span class="hljs-keyword">new</span> <span class="title class_">OAuth2AuthorizationServerConfigurer</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="hljs-comment">//自定义用户映射器</span></span><br><span class="line">    Function&lt;OidcUserInfoAuthenticationContext, OidcUserInfo&gt; userInfoMapper = (context) -&gt; {</span><br><span class="line">        <span class="hljs-type">OidcUserInfoAuthenticationToken</span> <span class="hljs-variable">authentication</span> <span class="hljs-operator">=</span> context.getAuthentication();</span><br><span class="line">        <span class="hljs-type">JwtAuthenticationToken</span> <span class="hljs-variable">principal</span> <span class="hljs-operator">=</span> (JwtAuthenticationToken) authentication.getPrincipal();</span><br><span class="line">        <span class="hljs-keyword">return</span> userInfoService.loadUser(principal.getName(), context.getAccessToken().getScopes());</span><br><span class="line">    };</span><br><span class="line">    authorizationServerConfigurer.oidc((oidc) -&gt; {</span><br><span class="line">        oidc.userInfoEndpoint((userInfo) -&gt; userInfo.userInfoMapper(userInfoMapper));</span><br><span class="line">    });</span><br><span class="line"></span><br><span class="line">    <span class="hljs-type">RequestMatcher</span> <span class="hljs-variable">endpointsMatcher</span> <span class="hljs-operator">=</span> authorizationServerConfigurer.getEndpointsMatcher();</span><br><span class="line"></span><br><span class="line">    <span class="hljs-keyword">return</span> http.requestMatcher(endpointsMatcher).authorizeRequests((authorizeRequests) -&gt; {</span><br><span class="line">        ((ExpressionUrlAuthorizationConfigurer.AuthorizedUrl) authorizeRequests.anyRequest()).authenticated();</span><br><span class="line">    }).csrf((csrf) -&gt; {</span><br><span class="line">        csrf.ignoringRequestMatchers(<span class="hljs-keyword">new</span> <span class="title class_">RequestMatcher</span>[]{endpointsMatcher});</span><br><span class="line">    }).apply(authorizationServerConfigurer)</span><br><span class="line">            .and()</span><br><span class="line">            .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)</span><br><span class="line">            .exceptionHandling(exceptions -&gt; exceptions.</span><br><span class="line">                    authenticationEntryPoint(<span class="hljs-keyword">new</span> <span class="title class_">LoginUrlAuthenticationEntryPoint</span>(<span class="hljs-string">"/login"</span>)))</span><br><span class="line">            .apply(authorizationServerConfigurer)</span><br><span class="line">            .and()</span><br><span class="line">            .build();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>每个授权服务器都需要其用于令牌的签名密钥，让我们生成一个 2048 字节的 RSA 密钥：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-keyword">public</span> JWKSource&lt;SecurityContext&gt; <span class="title function_">jwkSource</span><span class="hljs-params">()</span> {</span><br><span class="line">  <span class="hljs-type">RSAKey</span> <span class="hljs-variable">rsaKey</span> <span class="hljs-operator">=</span> Jwks.generateRsa();</span><br><span class="line">  <span class="hljs-type">JWKSet</span> <span class="hljs-variable">jwkSet</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="title class_">JWKSet</span>(rsaKey);</span><br><span class="line">  <span class="hljs-keyword">return</span> (jwkSelector, securityContext) -&gt; jwkSelector.select(jwkSet);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="title class_">Jwks</span> {</span><br><span class="line"></span><br><span class="line">  <span class="hljs-keyword">private</span> <span class="title function_">Jwks</span><span class="hljs-params">()</span> {</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> RSAKey <span class="title function_">generateRsa</span><span class="hljs-params">()</span> {</span><br><span class="line">    <span class="hljs-type">KeyPair</span> <span class="hljs-variable">keyPair</span> <span class="hljs-operator">=</span> KeyGeneratorUtils.generateRsaKey();</span><br><span class="line">    <span class="hljs-type">RSAPublicKey</span> <span class="hljs-variable">publicKey</span> <span class="hljs-operator">=</span> (RSAPublicKey) keyPair.getPublic();</span><br><span class="line">    <span class="hljs-type">RSAPrivateKey</span> <span class="hljs-variable">privateKey</span> <span class="hljs-operator">=</span> (RSAPrivateKey) keyPair.getPrivate();</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">RSAKey</span>.Builder(publicKey)</span><br><span class="line">      .privateKey(privateKey)</span><br><span class="line">      .keyID(UUID.randomUUID().toString())</span><br><span class="line">      .build();</span><br><span class="line">  }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="title class_">KeyGeneratorUtils</span> {</span><br><span class="line"></span><br><span class="line">  <span class="hljs-keyword">private</span> <span class="title function_">KeyGeneratorUtils</span><span class="hljs-params">()</span> {</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="hljs-keyword">static</span> KeyPair <span class="title function_">generateRsaKey</span><span class="hljs-params">()</span> {</span><br><span class="line">    KeyPair keyPair;</span><br><span class="line">    <span class="hljs-keyword">try</span> {</span><br><span class="line">      <span class="hljs-type">KeyPairGenerator</span> <span class="hljs-variable">keyPairGenerator</span> <span class="hljs-operator">=</span> KeyPairGenerator.getInstance(<span class="hljs-string">"RSA"</span>);</span><br><span class="line">      keyPairGenerator.initialize(<span class="hljs-number">2048</span>);</span><br><span class="line">      keyPair = keyPairGenerator.generateKeyPair();</span><br><span class="line">    } <span class="hljs-keyword">catch</span> (Exception ex) {</span><br><span class="line">      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="title class_">IllegalStateException</span>(ex);</span><br><span class="line">    }</span><br><span class="line">    <span class="hljs-keyword">return</span> keyPair;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>然后我们将使用带有@<em>EnableWebSecurity</em>注释的配置类启用 Spring Web 安全模块：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Configuration(proxyBeanMethods = false)</span></span><br><span class="line"><span class="hljs-meta">@EnableWebSecurity</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">DefaultSecurityConfig</span> {</span><br><span class="line"></span><br><span class="line">    <span class="hljs-meta">@Bean</span></span><br><span class="line">    SecurityFilterChain <span class="title function_">defaultSecurityFilterChain</span><span class="hljs-params">(HttpSecurity http)</span> <span class="hljs-keyword">throws</span> Exception {</span><br><span class="line">        http</span><br><span class="line">                .authorizeRequests(authorizeRequests -&gt;</span><br><span class="line">                        authorizeRequests.anyRequest().authenticated()</span><br><span class="line">                )</span><br><span class="line">                .formLogin(withDefaults());</span><br><span class="line">        <span class="hljs-keyword">return</span> http.build();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="hljs-comment">//...</span></span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里我们使用Form表单认证方式，所以我们还需要为登录认证提供用户名和密码：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line">UserDetailsService <span class="title function_">users</span><span class="hljs-params">()</span> {</span><br><span class="line">    <span class="hljs-type">UserDetails</span> <span class="hljs-variable">user</span> <span class="hljs-operator">=</span> User.withDefaultPasswordEncoder()</span><br><span class="line">            .username(<span class="hljs-string">"admin"</span>)</span><br><span class="line">            .password(<span class="hljs-string">"password"</span>)</span><br><span class="line">            .roles(<span class="hljs-string">"ADMIN"</span>)</span><br><span class="line">            .build();</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">InMemoryUserDetailsManager</span>(user);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>至此，我们服务配置完成，但是用于给客户端传递权限信息，我们将更改<code>ID Token</code> claim，添加用户角色属性：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Configuration(proxyBeanMethods = false)</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">IdTokenCustomizerConfig</span> {</span><br><span class="line"></span><br><span class="line">    <span class="hljs-meta">@Bean</span></span><br><span class="line">    <span class="hljs-keyword">public</span> OAuth2TokenCustomizer&lt;JwtEncodingContext&gt; <span class="title function_">tokenCustomizer</span><span class="hljs-params">()</span> {</span><br><span class="line">        <span class="hljs-keyword">return</span> (context) -&gt; {</span><br><span class="line">            <span class="hljs-keyword">if</span> (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {</span><br><span class="line">                context.getClaims().claims(claims -&gt;</span><br><span class="line">                        claims.put(<span class="hljs-string">"role"</span>, context.getPrincipal().getAuthorities()</span><br><span class="line">                                .stream().map(GrantedAuthority::getAuthority)</span><br><span class="line">                                .collect(Collectors.toSet())));</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+<h3 id="登录依赖方服务（RP）实现"><a href="#登录依赖方服务（RP）实现" class="headerlink" title="登录依赖方服务（RP）实现"></a>登录依赖方服务（RP）实现</h3><p>本节中我们将使用Spring Security搭建登录依赖方服务，并设计相关数据库表结构表达关联身份提供方服务与登录依赖方服务权限关系，通过<code>OAuth2UserService</code>实现权限映射。</p>
+<p>本节中部分代码涉及JPA相关知识，如果您并不了解也没有关系，您可以通过Mybatis进行替换。</p>
+<h4 id="maven-依赖项-1"><a href="#maven-依赖项-1" class="headerlink" title="maven 依赖项"></a>maven 依赖项</h4><figure class="highlight xml hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-web<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span></span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-oauth2-client<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>  </span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-data-jdbc<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>  </span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-data-jpa<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>  </span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-thymeleaf<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.6.7<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>  </span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>mysql<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>mysql-connector-java<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>8.0.21<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>  </span><br><span class="line"><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id="相关数据库表结构"><a href="#相关数据库表结构" class="headerlink" title="相关数据库表结构"></a>相关数据库表结构</h4><p>这是我们本文中RP服务使用的相关数据库表，涉及相关创建表及初始化数据的SQL语句可以<a target="_blank" rel="noopener" href="https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login/rp/src/main/resources/db/migration">从这里</a>获取。</p>
+<p><img src="/2022/08/01/springn-security-oidc/oauth2_sql_model.png"></p>
+<h4 id="配置-1"><a href="#配置-1" class="headerlink" title="配置"></a>配置</h4><p>首先我们通过application.yml文件中配置服务端口和数据库连接信息：</p>
+<figure class="highlight yaml hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">server:</span></span><br><span class="line">  <span class="hljs-attr">port:</span> <span class="hljs-number">8070</span></span><br><span class="line">  <span class="hljs-attr">servlet:</span></span><br><span class="line">    <span class="hljs-attr">session:</span></span><br><span class="line">      <span class="hljs-attr">cookie:</span></span><br><span class="line">        <span class="hljs-attr">name:</span> <span class="hljs-string">CLIENT-SESSION</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">spring:</span></span><br><span class="line">  <span class="hljs-attr">datasource:</span></span><br><span class="line">    <span class="hljs-attr">druid:</span></span><br><span class="line">      <span class="hljs-attr">db-type:</span> <span class="hljs-string">mysql</span></span><br><span class="line">      <span class="hljs-attr">driver-class-name:</span> <span class="hljs-string">com.mysql.cj.jdbc.Driver</span></span><br><span class="line">      <span class="hljs-attr">url:</span> <span class="hljs-string">jdbc:mysql://localhost:3306/oidc_login?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false&amp;serverTimezone=Asia/Shanghai&amp;allowPublicKeyRetrieval=true</span></span><br><span class="line">      <span class="hljs-attr">username:</span> <span class="hljs-string">&lt;&lt;root&gt;&gt;</span> <span class="hljs-comment"># 修改用户名</span></span><br><span class="line">      <span class="hljs-attr">password:</span> <span class="hljs-string">&lt;&lt;password&gt;&gt;</span> <span class="hljs-comment"># 修改密码</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>接下来我们将启用Spring Security安全配置。使用Form认证方式；并使用<em>oauth2Login</em>()定义OAuth2登录默认配置：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line">SecurityFilterChain <span class="title function_">securityFilterChain</span><span class="hljs-params">(HttpSecurity http)</span> <span class="hljs-keyword">throws</span> Exception {</span><br><span class="line">    http.authorizeHttpRequests()</span><br><span class="line">            .anyRequest()</span><br><span class="line">            .authenticated()</span><br><span class="line">            .and()</span><br><span class="line">            .formLogin(from -&gt; {</span><br><span class="line">                from.defaultSuccessUrl(<span class="hljs-string">"/home"</span>);</span><br><span class="line">            })</span><br><span class="line">            .oauth2Login(Customizer.withDefaults())</span><br><span class="line">            .csrf().disable();</span><br><span class="line">    <span class="hljs-keyword">return</span> http.build();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>下面我们将配置OAuth2客户端基于MySql数据库的存储方式，你也可以从<a href="https://relive27.github.io/2022/07/03/persisrence-oauth2-client/">Spring Security 持久化OAuth2客户端</a>了解详细信息。</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment"> * 定义JDBC 客户端注册存储库</span></span><br><span class="line"><span class="hljs-comment"> *</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> jdbcTemplate</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span></span><br><span class="line"><span class="hljs-comment"> */</span></span><br><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-keyword">public</span> ClientRegistrationRepository <span class="title function_">clientRegistrationRepository</span><span class="hljs-params">(JdbcTemplate jdbcTemplate)</span> {</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">JdbcClientRegistrationRepository</span>(jdbcTemplate);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment"> * 负责{<span class="hljs-doctag">@link</span> org.springframework.security.oauth2.client.OAuth2AuthorizedClient}在 Web 请求之间进行持久化</span></span><br><span class="line"><span class="hljs-comment"> *</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> jdbcTemplate</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> clientRegistrationRepository</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span></span><br><span class="line"><span class="hljs-comment"> */</span></span><br><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-keyword">public</span> OAuth2AuthorizedClientService <span class="title function_">authorizedClientService</span><span class="hljs-params">(</span></span><br><span class="line"><span class="hljs-params">        JdbcTemplate jdbcTemplate,</span></span><br><span class="line"><span class="hljs-params">        ClientRegistrationRepository clientRegistrationRepository)</span> {</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">JdbcOAuth2AuthorizedClientService</span>(jdbcTemplate, clientRegistrationRepository);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment"> * OAuth2AuthorizedClientRepository 是一个容器类，用于在请求之间保存和持久化授权客户端</span></span><br><span class="line"><span class="hljs-comment"> *</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> authorizedClientService</span></span><br><span class="line"><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span></span><br><span class="line"><span class="hljs-comment"> */</span></span><br><span class="line"><span class="hljs-meta">@Bean</span></span><br><span class="line"><span class="hljs-keyword">public</span> OAuth2AuthorizedClientRepository <span class="title function_">authorizedClientRepository</span><span class="hljs-params">(</span></span><br><span class="line"><span class="hljs-params">        OAuth2AuthorizedClientService authorizedClientService)</span> {</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">AuthenticatedPrincipalOAuth2AuthorizedClientRepository</span>(authorizedClientService);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<br>
+
+<p>我们不在使用基于内存的用户名密码，在初始化数据库时我们已经将用户名密码添加到user表中，所以我们需要实现<em>UserDetailsService</em>接口用于Form认证时获取用户信息：</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@RequiredArgsConstructor</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">JdbcUserDetailsService</span> <span class="hljs-keyword">implements</span> <span class="title class_">UserDetailsService</span> {</span><br><span class="line"></span><br><span class="line">    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> UserRepository userRepository;</span><br><span class="line"></span><br><span class="line">    <span class="hljs-meta">@Override</span></span><br><span class="line">    <span class="hljs-keyword">public</span> UserDetails <span class="title function_">loadUserByUsername</span><span class="hljs-params">(String username)</span> <span class="hljs-keyword">throws</span> UsernameNotFoundException {</span><br><span class="line">        com.relive.entity.<span class="hljs-type">User</span> <span class="hljs-variable">user</span> <span class="hljs-operator">=</span> userRepository.findUserByUsername(username);</span><br><span class="line">        <span class="hljs-keyword">if</span> (ObjectUtils.isEmpty(user)) {</span><br><span class="line">            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="title class_">UsernameNotFoundException</span>(<span class="hljs-string">"user is not found"</span>);</span><br><span class="line">        }</span><br><span class="line">        <span class="hljs-keyword">if</span> (CollectionUtils.isEmpty(user.getRoleList())) {</span><br><span class="line">            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="title class_">UsernameNotFoundException</span>(<span class="hljs-string">"role is not found"</span>);</span><br><span class="line">        }</span><br><span class="line">        Set&lt;SimpleGrantedAuthority&gt; authorities = user.getRoleList().stream().map(Role::getRoleCode)</span><br><span class="line">                .map(SimpleGrantedAuthority::<span class="hljs-keyword">new</span>).collect(Collectors.toSet());</span><br><span class="line">        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="title class_">User</span>(user.getUsername(), user.getPassword(), authorities);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里<em>UserRepository</em>继承了<em>JpaRepository</em>，提供user表的CRUD，详细代码可以在文末链接中获取。</p>
+<br>
+
+<p>现在我们将要解决如何将IdP服务用户角色映射为RP服务已有的角色，在<a href="https://relive27.github.io/2022/07/25/oauth2-login/">前面文章</a>中曾使用<code>GrantedAuthoritiesMapper</code>映射角色。在本文中我们将使用<em>OAuth2UserService</em>添加角色映射策略，它与<code>GrantedAuthoritiesMapper</code>相比更加灵活:</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">OidcRoleMappingUserService</span> <span class="hljs-keyword">implements</span> <span class="title class_">OAuth2UserService</span>&lt;OidcUserRequest, OidcUser&gt; {</span><br><span class="line">    <span class="hljs-keyword">private</span> OidcUserService oidcUserService;</span><br><span class="line">    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> OAuth2ClientRoleRepository oAuth2ClientRoleRepository;</span><br><span class="line"></span><br><span class="line">    <span class="hljs-comment">//...</span></span><br><span class="line"></span><br><span class="line">    <span class="hljs-meta">@Override</span></span><br><span class="line">    <span class="hljs-keyword">public</span> OidcUser <span class="title function_">loadUser</span><span class="hljs-params">(OidcUserRequest userRequest)</span> <span class="hljs-keyword">throws</span> OAuth2AuthenticationException {</span><br><span class="line">        <span class="hljs-type">OidcUser</span> <span class="hljs-variable">oidcUser</span> <span class="hljs-operator">=</span> oidcUserService.loadUser(userRequest);</span><br><span class="line"></span><br><span class="line">        <span class="hljs-type">OidcIdToken</span> <span class="hljs-variable">idToken</span> <span class="hljs-operator">=</span> userRequest.getIdToken();</span><br><span class="line">        List&lt;String&gt; role = idToken.getClaimAsStringList(<span class="hljs-string">"role"</span>);</span><br><span class="line">        Set&lt;SimpleGrantedAuthority&gt; mappedAuthorities = role.stream()</span><br><span class="line">                .map(r -&gt; oAuth2ClientRoleRepository.findByClientRegistrationIdAndRoleCode(userRequest.getClientRegistration().getRegistrationId(), r))</span><br><span class="line">                .map(OAuth2ClientRole::getRole).map(Role::getRoleCode).map(SimpleGrantedAuthority::<span class="hljs-keyword">new</span>)</span><br><span class="line">                .collect(Collectors.toSet());</span><br><span class="line">        oidcUser = <span class="hljs-keyword">new</span> <span class="title class_">DefaultOidcUser</span>(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());</span><br><span class="line"></span><br><span class="line">        <span class="hljs-keyword">return</span> oidcUser;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>最后我们将创建HomeController，通过控制页面中展示内容使测试效果视觉上更加显著，我们将根据角色展示不同信息，使用<a target="_blank" rel="noopener" href="https://www.thymeleaf.org/">thymeleaf</a>模版引擎渲染。</p>
+<figure class="highlight java hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Controller</span></span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="title class_">HomeController</span> {</span><br><span class="line"></span><br><span class="line">    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> Map&lt;String, List&lt;String&gt;&gt; articles = <span class="hljs-keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="hljs-keyword">static</span> {</span><br><span class="line">        articles.put(<span class="hljs-string">"ROLE_OPERATION"</span>, Arrays.asList(<span class="hljs-string">"Java"</span>));</span><br><span class="line">        articles.put(<span class="hljs-string">"ROLE_SYSTEM"</span>, Arrays.asList(<span class="hljs-string">"Java"</span>, <span class="hljs-string">"Python"</span>, <span class="hljs-string">"C++"</span>));</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="hljs-meta">@GetMapping("/home")</span></span><br><span class="line">    <span class="hljs-keyword">public</span> String <span class="title function_">home</span><span class="hljs-params">(Authentication authentication, Model model)</span> {</span><br><span class="line">        <span class="hljs-type">String</span> <span class="hljs-variable">authority</span> <span class="hljs-operator">=</span> authentication.getAuthorities().iterator().next().getAuthority();</span><br><span class="line">        model.addAttribute(<span class="hljs-string">"articles"</span>, articles.get(authority));</span><br><span class="line">        <span class="hljs-keyword">return</span> <span class="hljs-string">"home"</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>完成配置后，我们可以访问 <a target="_blank" rel="noopener" href="http://127.0.0.1:8070/login">http://127.0.0.1:8070/login</a> 进行测试。</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>在本文中分享了Spring Security对于OpenID Connect的支持。与往常一样，本文中使用的源代码可<a target="_blank" rel="noopener" href="https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login">在 GitHub 上</a>获得。</p>
+</body></html>
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/spring-security/">#spring security</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/OAuth2/">#OAuth2</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/2022/07/25/oauth2-login/">Spring Security OAuth2登录</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2022 ReLive27&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        target="_blank" rel="noopener" href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            <div class="column is-narrow">
+                <div class="columns is-mobile is-multiline is-centered">
+                
+                    
+                <a class="column is-narrow has-text-black" title="GitHub" target="_blank" rel="noopener" href="https://github.com/ReLive27">
+                    
+                    GitHub
+                    
+                </a>
+                
+                </div>
+            </div>
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" target="_blank" rel="noopener" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("zh-CN");
+</script>
+
+
+    
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+<script>
+    MathJax.Hub.Config({
+        "HTML-CSS": {
+            matchFontHeight: false
+        },
+        SVG: {
+            matchFontHeight: false
+        },
+        CommonHTML: {
+            matchFontHeight: false
+        },
+        tex2jax: {
+            inlineMath: [
+                ['$','$'],
+                ['\\(','\\)']
+            ]
+        }
+    });
+</script>
+
+    
+    
+    
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/lightgallery/1.6.8/js/lightgallery-all.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/justifiedGallery/3.6.5/js/jquery.justifiedGallery.min.js"></script>
+<script>
+    (function ($) {
+        $(document).ready(function () {
+            if (typeof($.fn.lightGallery) === 'function') {
+                $('.article.gallery').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof($.fn.justifiedGallery) === 'function') {
+                $('.justified-gallery > p > .gallery-item').unwrap();
+                $('.justified-gallery').justifiedGallery();
+            }
+        });
+    })(jQuery);
+</script>
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script>
+    <style>
+        .hljs {
+            position: relative;
+        }
+
+        .hljs .clipboard-btn {
+            float: right;
+            color: #9a9a9a;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hljs .clipboard-btn:hover {
+          color: #8a8a8a;
+        }
+
+        .hljs > .clipboard-btn {
+            display: none;
+            position: absolute;
+            right: 4px;
+            top: 4px;
+        }
+
+        .hljs:hover > .clipboard-btn {
+            display: inline;
+        }
+
+        .hljs > figcaption > .clipboard-btn {
+            margin-right: 4px;
+        }
+    </style>
+    <script>
+      $(document).ready(function () {
+        $('figure.hljs').each(function(i, figure) {
+          var codeId = 'code-' + i;
+          var code = figure.querySelector('.code');
+          var copyButton = $('<button>Copy <i class="far fa-clipboard"></i></button>');
+          code.id = codeId;
+          copyButton.addClass('clipboard-btn');
+          copyButton.attr('data-clipboard-target-id', codeId);
+
+          var figcaption = figure.querySelector('figcaption');
+
+          if (figcaption) {
+            figcaption.append(copyButton[0]);
+          } else {
+            figure.prepend(copyButton[0]);
+          }
+        })
+
+        var clipboard = new ClipboardJS('.clipboard-btn', {
+          target: function(trigger) {
+            return document.getElementById(trigger.getAttribute('data-clipboard-target-id'));
+          }
+        });
+        clipboard.on('success', function(e) {
+          e.clearSelection();
+        })
+      })
+    </script>
+
+    
+    
+
+    
+
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="站内搜索" />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: '文章',
+                PAGES: '页面',
+                CATEGORIES: '分类',
+                TAGS: '标签',
+                UNTITLED: '(无标题)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+    
+</body>
+</html>
