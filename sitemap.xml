@@ -182,13 +182,6 @@
 
   
   <url>
-    <loc>https://relive27.github.io/tags/mybatis/</loc>
-    <lastmod>2022-08-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://relive27.github.io/tags/spring-security/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
@@ -203,7 +196,21 @@
   </url>
   
   <url>
+    <loc>https://relive27.github.io/tags/mybatis/</loc>
+    <lastmod>2022-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://relive27.github.io/tags/ssh/</loc>
+    <lastmod>2022-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://relive27.github.io/tags/spring-cloud/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -231,13 +238,6 @@
   </url>
   
   <url>
-    <loc>https://relive27.github.io/tags/spring-cloud/</loc>
-    <lastmod>2022-08-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://relive27.github.io/tags/redis/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
@@ -247,14 +247,14 @@
 
   
   <url>
-    <loc>https://relive27.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</loc>
+    <loc>https://relive27.github.io/categories/SpringSecurity/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://relive27.github.io/categories/Mybatis/</loc>
+    <loc>https://relive27.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -268,7 +268,7 @@
   </url>
   
   <url>
-    <loc>https://relive27.github.io/categories/SpringSecurity/</loc>
+    <loc>https://relive27.github.io/categories/Mybatis/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -282,14 +282,14 @@
   </url>
   
   <url>
-    <loc>https://relive27.github.io/categories/SpringBoot/</loc>
+    <loc>https://relive27.github.io/categories/SpringCloud/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://relive27.github.io/categories/SpringCloud/</loc>
+    <loc>https://relive27.github.io/categories/SpringBoot/</loc>
     <lastmod>2022-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
