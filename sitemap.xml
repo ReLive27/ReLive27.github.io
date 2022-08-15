@@ -182,13 +182,6 @@
 
   
   <url>
-    <loc>https://relive27.github.io/tags/ssh/</loc>
-    <lastmod>2022-08-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://relive27.github.io/tags/mybatis/</loc>
     <lastmod>2022-08-15</lastmod>
     <changefreq>weekly</changefreq>
@@ -204,6 +197,13 @@
   
   <url>
     <loc>https://relive27.github.io/tags/OAuth2/</loc>
+    <lastmod>2022-08-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://relive27.github.io/tags/ssh/</loc>
     <lastmod>2022-08-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -231,34 +231,20 @@
   </url>
   
   <url>
-    <loc>https://relive27.github.io/tags/JWT/</loc>
-    <lastmod>2022-08-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://relive27.github.io/tags/redis/</loc>
     <lastmod>2022-08-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
+  <url>
+    <loc>https://relive27.github.io/tags/JWT/</loc>
+    <lastmod>2022-08-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
 
-  
-  <url>
-    <loc>https://relive27.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</loc>
-    <lastmod>2022-08-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://relive27.github.io/categories/java/</loc>
-    <lastmod>2022-08-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
   
   <url>
     <loc>https://relive27.github.io/categories/weekly/</loc>
@@ -276,6 +262,20 @@
   
   <url>
     <loc>https://relive27.github.io/categories/SpringSecurity/</loc>
+    <lastmod>2022-08-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://relive27.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</loc>
+    <lastmod>2022-08-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://relive27.github.io/categories/java/</loc>
     <lastmod>2022-08-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
