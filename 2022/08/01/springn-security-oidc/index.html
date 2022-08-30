@@ -23,7 +23,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://relive27.github.io/2022/08/01/springn-security-oidc/oauth2_sql_model.png">
 <meta property="article:published_time" content="2022-08-01T12:35:28.000Z">
-<meta property="article:modified_time" content="2022-08-01T13:21:59.918Z">
+<meta property="article:modified_time" content="2022-08-24T12:15:42.596Z">
 <meta property="article:author" content="ReLive27">
 <meta property="article:tag" content="spring security">
 <meta property="article:tag" content="OAuth2">
@@ -149,7 +149,7 @@
         <span class="column is-narrow">
             
             
-            17 分钟 读完 (约 2613 字)
+            17 分钟 读完 (约 2621 字)
         </span>
         
     </div>
@@ -186,11 +186,11 @@
 
 <p>我们正在配置的属性是：</p>
 <ul>
-<li>clientId – Spring Security将使用它来识别哪个客户端正在尝试访问资源</li>
+<li>clientId —— Spring Security将使用它来识别哪个客户端正在尝试访问资源</li>
 <li>clientSecret——客户端和服务器都知道的一个秘密，它提供了两者之间的信任</li>
-<li>客户端验证方式——在我们的例子中，我们将支持basic和post身份验证方式</li>
-<li>授权类型——允许客户端生成授权码和刷新令牌</li>
-<li>重定向 URI – 客户端将在基于重定向的流程中使用它</li>
+<li>clientAuthenticationMethod——客户端验证方式，在我们的例子中，我们将支持basic和post身份验证方式</li>
+<li>authorizationGrantType——授权类型，允许客户端生成授权码和刷新令牌</li>
+<li>redirectUri —— 重定向 URI，客户端将在基于重定向的流程中使用它</li>
 <li>scope——此参数定义客户端可能拥有的权限。在我们的例子中，我们将拥有所需的<em>OidcScopes.OPENID</em>和用来获取额外的<em>身份</em>信息<em>OidcScopes.PROFILE</em>，<em>OidcScopes.EMAIL</em>。</li>
 </ul>
 <br>

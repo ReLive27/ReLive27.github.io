@@ -2,7 +2,7 @@
 <html class="has-navbar-fixed-top">
 <head>
     <meta charset="utf-8">
-<title>归档: 2022/8 - ReLive27的博客</title>
+<title>Spring Security OAuth2配置资源服务器JWK缓存 - ReLive27的博客</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
@@ -16,12 +16,15 @@
 
 
 
-    <meta property="og:type" content="website">
-<meta property="og:title" content="ReLive27的博客">
-<meta property="og:url" content="https://relive27.github.io/archives/2022/08/index.html">
+    <meta property="og:type" content="article">
+<meta property="og:title" content="Spring Security OAuth2配置资源服务器JWK缓存">
+<meta property="og:url" content="https://relive27.github.io/2022/08/17/spring-security-resourceserver-jwk/index.html">
 <meta property="og:site_name" content="ReLive27的博客">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-08-17T05:01:39.000Z">
+<meta property="article:modified_time" content="2022-08-17T05:14:37.411Z">
 <meta property="article:author" content="ReLive27">
+<meta property="article:tag" content="spring security">
 <meta name="twitter:card" content="summary">
 
 
@@ -121,34 +124,67 @@
 
     <section class="section">
     <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Spring Security OAuth2配置资源服务器JWK缓存
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            
+                <time datetime="2022-08-17T05:01:39.000Z" itemprop="datePublished">8月 17 2022</time>
+            
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/SpringSecurity/">SpringSecurity</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            2 分钟 读完 (约 280 字)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <!-- spring security resource server jwk --><html><head></head><body><span id="more"></span>
+
+<h2 id="Spring-Security-OAuth2配置资源服务器JWK缓存"><a href="#Spring-Security-OAuth2配置资源服务器JWK缓存" class="headerlink" title="Spring Security OAuth2配置资源服务器JWK缓存"></a>Spring Security OAuth2配置资源服务器JWK缓存</h2><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p><a target="_blank" rel="noopener" href="https://www.rfc-editor.org/rfc/rfc7517">JSON Web Key </a> (JWK) 是一种 JSON 数据结构，表示一组公钥。</p>
+<p>在</p>
+<figure class="highlight json hljs"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-punctuation">{</span></span><br><span class="line"><span class="hljs-attr">"keys"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span></span><br><span class="line">  <span class="hljs-punctuation">{</span></span><br><span class="line">    <span class="hljs-attr">"alg"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"RS256"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"kty"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"RSA"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"use"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sig"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"x5c"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span></span><br><span class="line">      <span class="hljs-string">"MIIC+DCCAeCgAwIBAgIJBIGjYW6hFpn2MA0GCSqGSIb3DQEBBQUAMCMxITAfBgNVBAMTGGN1c3RvbWVyLWRlbW9zLmF1dGgwLmNvbTAeFw0xNjExMjIyMjIyMDVaFw0zMDA4MDEyMjIyMDVaMCMxITAfBgNVBAMTGGN1c3RvbWVyLWRlbW9zLmF1dGgwLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMnjZc5bm/eGIHq09N9HKHahM7Y31P0ul+A2wwP4lSpIwFrWHzxw88/7Dwk9QMc+orGXX95R6av4GF+Es/nG3uK45ooMVMa/hYCh0Mtx3gnSuoTavQEkLzCvSwTqVwzZ+5noukWVqJuMKNwjL77GNcPLY7Xy2/skMCT5bR8UoWaufooQvYq6SyPcRAU4BtdquZRiBT4U5f+4pwNTxSvey7ki50yc1tG49Per/0zA4O6Tlpv8x7Red6m1bCNHt7+Z5nSl3RX/QYyAEUX1a28VcYmR41Osy+o2OUCXYdUAphDaHo4/8rbKTJhlu8jEcc1KoMXAKjgaVZtG/v5ltx6AXY0CAwEAAaMvMC0wDAYDVR0TBAUwAwEB/zAdBgNVHQ4EFgQUQxFG602h1cG+pnyvJoy9pGJJoCswDQYJKoZIhvcNAQEFBQADggEBAGvtCbzGNBUJPLICth3mLsX0Z4z8T8iu4tyoiuAshP/Ry/ZBnFnXmhD8vwgMZ2lTgUWwlrvlgN+fAtYKnwFO2G3BOCFw96Nm8So9sjTda9CCZ3dhoH57F/hVMBB0K6xhklAc0b5ZxUpCIN92v/w+xZoz1XQBHe8ZbRHaP1HpRM4M7DJk2G5cgUCyu3UBvYS41sHvzrxQ3z7vIePRA4WF4bEkfX12gvny0RsPkrbVMXX1Rj9t6V7QXrbPYBAO+43JvDGYawxYVvLhz+BJ45x50GFQmHszfY3BR9TPK8xmMmQwtIvLu1PMttNCs7niCYkSiUv2sc2mlq1i3IashGkkgmo="</span></span><br><span class="line">    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"n"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"yeNlzlub94YgerT030codqEztjfU_S6X4DbDA_iVKkjAWtYfPHDzz_sPCT1Axz6isZdf3lHpq_gYX4Sz-cbe4rjmigxUxr-FgKHQy3HeCdK6hNq9ASQvMK9LBOpXDNn7mei6RZWom4wo3CMvvsY1w8tjtfLb-yQwJPltHxShZq5-ihC9irpLI9xEBTgG12q5lGIFPhTl_7inA1PFK97LuSLnTJzW0bj096v_TMDg7pOWm_zHtF53qbVsI0e3v5nmdKXdFf9BjIARRfVrbxVxiZHjU6zL6jY5QJdh1QCmENoejj_ytspMmGW7yMRxzUqgxcAqOBpVm0b-_mW3HoBdjQ"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"e"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"AQAB"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"kid"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"NjVBRjY5MDlCMUIwNzU4RTA2QzZFMDQ4QzQ2MDAyQjVDNjk1RTM2Qg"</span><span class="hljs-punctuation">,</span></span><br><span class="line">    <span class="hljs-attr">"x5t"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"NjVBRjY5MDlCMUIwNzU4RTA2QzZFMDQ4QzQ2MDAyQjVDNjk1RTM2Qg"</span></span><br><span class="line">  <span class="hljs-punctuation">}</span></span><br><span class="line"><span class="hljs-punctuation">]</span><span class="hljs-punctuation">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+</body></html>
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/spring-security/">#spring security</a></span>
+    
+    </div>
     
     
-        <div class="archive content">
-            <h4 class="title is-4" id="2022">2022</h4>
-            <div class="articles">
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
             
-                <div class="article content>">
-                    <time class="is-text-small" datetime="2022-08-17T05:01:39.000Z" itemprop="datePublished">
-                        8月 17</time>
-                    <h6 class="title is-6"><a href="/2022/08/17/spring-security-resourceserver-jwk/">Spring Security OAuth2配置资源服务器JWK缓存</a></h6>
-                </div>
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
             
-                <div class="article content>">
-                    <time class="is-text-small" datetime="2022-08-13T04:07:52.000Z" itemprop="datePublished">
-                        8月 13</time>
-                    <h6 class="title is-6"><a href="/2022/08/13/spring-gateway-oauth2/">将Spring Cloud Gateway 与OAuth2模式一起使用</a></h6>
-                </div>
+            <a href="/2022/08/13/spring-gateway-oauth2/">将Spring Cloud Gateway 与OAuth2模式一起使用</a>
             
-                <div class="article content>">
-                    <time class="is-text-small" datetime="2022-08-01T12:35:28.000Z" itemprop="datePublished">
-                        8月 1</time>
-                    <h6 class="title is-6"><a href="/2022/08/01/springn-security-oidc/">Spring Security和OpenID Connect</a></h6>
-                </div>
-            
-            </div>
-        </div>
+        </span>
+    </div>
     
-    
+</article>
+
+
+
+
     </div>
 </section>
     <footer class="footer">
