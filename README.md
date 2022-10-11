@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="Logo" src="https://github.com/ReLive27/ReLive27.github.io/blob/5640044751b0f985cba7bc5ba553fd8520563c54/public/static/images/logo.png" width="100px" />
+  <img alt="Logo" src="https://github.com/ReLive27/ReLive27.github.io/blob/main/public/static/images/logo.png" width="100px" />
 </div>
 <h1 align="center">
   reLive27.github.io
