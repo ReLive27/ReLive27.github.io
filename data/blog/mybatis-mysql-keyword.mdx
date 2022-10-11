@@ -1,0 +1,43 @@
+---
+title: Mybatis-plus遇到MySQL关键字如何解决
+date: 2022-05-18 17:33:52
+tags: ['mybatis', 'java']
+images: ['/static/images/blogs/mybatis.png']
+draft: false
+authors: ['default']
+---
+
+## Mybatis-plus遇到MySQL关键字如何解决
+
+在我们开发中经常会遇到在实体类中某个字段是MySQL的关键字，例如：
+
+```java
+@TableName
+public class User {
+  private Long id;
+  private String username;
+  private String describe;
+}
+
+```
+
+在我们使用Mybatis查询是会遇到报错，提示信息：
+
+```
+1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'describe from user' at line 1, Time: 0.009000s
+```
+
+这是因为Mybatis在执行sql时并没有将查询字段并没有通过间隔号，所以MySQL会把describe当作关键字。
+
+首先遇到这种情况，一我们可以更改字段名避免使用MySQL的关键字；二如果字段名不方便修改，那么我们可以使用`@TableField`显示的将字段使用间隔号。修改后实体类如下：
+
+```java
+@TableName
+public class User {
+  private Long id;
+  private String username;
+  @TableName("`describe`")
+  private String describe;
+}
+```
+

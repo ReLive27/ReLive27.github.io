@@ -1,0 +1,247 @@
+---
+title: SpringBoot整合redis
+date: 2022-05-10 20:23:20
+tags: ['SpringBoot', 'redis']
+draft: false
+authors: ['default']
+images: ['/static/images/blogs/springboot.jpeg']
+---
+
+## Redis介绍
+Redis是当前比较热门的NOSQL系统之一，它是一个开源的使用ANSI c语言编写的key-value存储系统（区别于MySQL的二维表格的形式存储。）。和Memcache类似，但很大程度补偿了Memcache的不足。和Memcache一样，Redis数据都是缓存在计算机内存中，不同的是，Memcache只能将数据缓存到内存中，无法自动定期写入硬盘，这就表示，一断电或重启，内存清空，数据丢失。所以Memcache的应用场景适用于缓存无需持久化的数据。而Redis不同的是它会周期性的把更新的数据写入磁盘或者把修改操作写入追加的记录文件，实现数据的持久化。
+
+Redis的特点：
+
+- Redis读取的速度是110000次/s，写的速度是81000次/s；
+
+- 原子 。Redis的所有操作都是原子性的，同时Redis还支持对几个操作全并后的原子性执行。
+
+- 支持多种数据结构：string（字符串）；list（列表）；hash（哈希），set（集合）；zset(有序集合)
+
+- 持久化，集群部署
+
+- 支持过期时间，支持事务，消息订阅
+
+
+## 引入依赖
+springboot版本使用的是2.3.0
+
+```xml
+	<dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+	</dependency>
+	<dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+            <version>2.6.1</version>
+    </dependency>
+```
+
+## application.yml
+
+```yaml
+spring:
+  redis:
+    host: 192.168.234.131 #Redis服务器地址
+    database: 0	#Redis数据库索引（默认为0）
+    port: 6379	#Redis服务器连接端口
+    password: 123456	#Redis服务器连接密码（默认为空）
+    timeout: 180000	#连接超时时间（毫秒）
+    lettuce:
+      pool:
+        max-active: 20	#连接池最大连接数（使用负值表示没有限制）
+        max-wait: 10000	#连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-idle: 5		#连接池中的最大空闲连接
+        min-idle: 0		#连接池中的最小空闲连接
+      shutdown-timeout: 100		#关闭超时时间
+```
+
+## 添加redis配置类
+
+```java
+@EnableCaching
+@Configuration
+public class RedisConfig extends CachingConfigurerSupport {
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        RedisSerializer<String> redisSerializer = new StringRedisSerializer();
+        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        jackson2JsonRedisSerializer.setObjectMapper(om);
+        template.setConnectionFactory(factory);
+        //key序列化方式
+        template.setKeySerializer(redisSerializer);
+        //value序列化
+        template.setValueSerializer(jackson2JsonRedisSerializer);
+        //value hashmap序列化
+        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        return template;
+    }
+
+    @Bean
+    public CacheManager cacheManager(RedisConnectionFactory factory) {
+        RedisSerializer<String> redisSerializer = new StringRedisSerializer();
+        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+        //解决查询缓存转换异常的问题
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        jackson2JsonRedisSerializer.setObjectMapper(om);
+        // 配置序列化（解决乱码的问题）,过期时间600秒
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofSeconds(600))
+              .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
+                .disableCachingNullValues();
+        RedisCacheManager cacheManager = RedisCacheManager.builder(factory)
+                .cacheDefaults(config)
+                .build();
+        return cacheManager;
+    }
+}
+```
+
+## SpringBoot缓存注解
+**@EnableCaching**
+开启基于注解的缓存
+
+**缓存@Cacheable**
+根据方法对其返回结果进行缓存，下次请求时，如果缓存存在，则直接读取缓存数据返回；如果缓存不存在，则执行方法，并把返回的结果存入缓存中。一般用在查询方法上。属性值如下：
+
+| 属性名           | 解释                                       |
+| :------------ | :--------------------------------------- |
+| value         | 缓存名，必填，它指定了你的缓存存放在哪块命名空间                 |
+| cacheNames    | 与 value 差不多，二选一即可                        |
+| key           | 缓存的 key，可以为空，如果指定要按照 **SpEL** 表达 式编写，如果不指定，则缺省按照方法的所有参数进行组合 |
+| keyGenerator  | 缓存数据时key生成策略，与key属性互斥                    |
+| cacheManager  | 指定自定义CacheManager的名称，与cacheResolver属性互斥  |
+| cacheResolver | 指定自定义的CacheResolver名称                    |
+| condition     | 缓存的条件，可以为空，表示方法结果始终被缓存。而使用 **SpEL** 编写，返回 true 或者 false，只有为 true 才进行缓存/清除缓存，在**调用方法之前之后**都能判断 |
+| unless        | 用于否决缓存的，不像condition，该表达式只在**方法执行之后**判断，此时可以拿到返回值result进行判 断。条件为true不会缓存，fasle才缓存 |
+| sync          | 是否同步，默认是false，如果为true，unless将不受支持        |
+
+
+**@CachePut**
+使用该注解标志的方法，每次都会执行，并将结果存入指定的缓存中。其他方法可以直接从响应的缓存中读取缓存数据，而不需要再去查询数据库。一般用在新增和更新方法上。属性值如下：
+
+| 属性名           | 解释                                       |
+| :------------ | :--------------------------------------- |
+| value         | 缓存名，必填，它指定了你的缓存存放在哪块命名空间                 |
+| cacheNames    | 与 value 差不多，二选一即可                        |
+| key           | 缓存的 key，可以为空，如果指定要按照 **SpEL** 表达式编写，如果不指定，则缺省按照方法的所有参数进行组合 |
+| keyGenerator  | 缓存数据时key生成策略，与key属性互斥                    |
+| cacheManager  | 指定自定义CacheManager的名称，与cacheResolver属性互斥  |
+| cacheResolver | 指定自定义的CacheResolver名称                    |
+| condition     | 缓存的条件，可以为空，表示方法结果始终被缓存。而使用**SpEL** 编写，返回 true 或者 false，只有为 true 才进行缓存/清除缓存，在**调用方法之前之后**都能判断 |
+| unless        | 用于否决缓存的，不像condition，该表达式只在**方法执行之后**判断，此时可以拿到返回值result进行判 断。条件为true不会缓存，fasle才缓存 |
+
+
+**@CacheEvict**
+使用该注解标志的方法，会清空指定的缓存。一般用在更新或者删除方法上，属性值如下：
+
+| 属性名              | 解释                                       |
+| :--------------- | :--------------------------------------- |
+| value            | 缓存名，必填，它指定了你的缓存存放在哪块命名空间                 |
+| cacheNames       | 与 value 差不多，二选一即可                        |
+| key              | 缓存的 key，可以为空，如果指定要按照 **SpEL** 表达式编写，如果不指定，则缺省按照方法的所有参数进行组合 |
+| keyGenerator     | 缓存数据时key生成策略，与key属性互斥                    |
+| cacheManager     | 指定自定义CacheManager的名称，与cacheResolver属性互斥  |
+| cacheResolver    | 指定自定义的CacheResolver名称                    |
+| condition        | 缓存的条件，可以为空，表示方法结果始终被缓存。而使用 **SpEL** 编写，返回 true 或者 false，只有为 true 才进行缓存/清除缓存，在**调用方法之前之后**都能判断 |
+| allEntries       | 是否清空所有缓存内容，缺省为 false。如果指定为 true，则方法调用后将立即清空所有缓存。<br />**注意不允许将此参数设置为true并指定一个key** |
+| beforeInvocation | 是否在方法执行前就清空，缺省为 false。缺省情况下，如果方法执行**抛出异常**，则不会清空缓存。如果指定 为 true，则在方法还没有执行的时候就清空缓存。 |
+
+**@Caching**
+不同或相同类型的缓存注释的组注释，用于定制复杂的缓存规则。
+
+| 属性名       | 解释                        |
+| :-------- | :------------------------ |
+| cacheable | 默认为空，可以定义一个或多个@Cacheable  |
+| put       | 默认为空，可以定义一个或多个@CachePut   |
+| evict     | 默认为空，可以定义一个或多个@CacheEvict |
+
+
+**@CacheConfig**
+用于标注在类上，可以存放该类中所有缓存的公有属性，比如设置缓存的名字。
+
+| 属性名           | 解释                                       |
+| :------------ | :--------------------------------------- |
+| cacheNames    | 与 value 差不多，二选一即可                        |
+| keyGenerator  | 缓存数据时key生成策略，与key属性互斥                    |
+| cacheManager  | 指定自定义CacheManager的名称，如果没有设置cacheResolver，并且在类中的缓存注解未设置缓存解析器和缓存管理器，则使用该管理器而不是默认值。 |
+| cacheResolver | 指定自定义CacheResolver的名称，如果在类中的缓存注解没有设置解析器和缓存管理器，则使用此解析器而不是默认值。 |
+
+
+
+### SpEL
+| 名字            | 位置                      | 描述                                       | 示例                                     |
+| :------------ | :---------------------- | :--------------------------------------- | :------------------------------------- |
+| methodName    | root object             | 当前被调用的方法名                                | #root.methodName                       |
+| method        | root object             | 当前被调用的方法                                 | #root.method.name                      |
+| target        | root object             | 当前被调用的目标对象                               | #root.target                           |
+| targetClass   | root object             | 当前被调用的目标对象类                              | #root.targetClass                      |
+| args          | root object             | 当前被调用的方法的参数列表                            | #root.args[0] 表示参数列表第一个参数              |
+| caches        | root object             | 当前方法调用使用的缓存列表（如@Cacheable(value={"cache1", "cache2"})），<br />则有两个cache | #root.caches[0].name，取缓存列<br />表中第一个缓存名称 |
+| argument name | evaluation context(上下文) | 方法参数的名字. 可以直接 #参数名 ，也可以使用 #p0或#a0 的 形式，0代表参数的索引； | #id、#p0,#a0                            |
+| result        | evaluation context      | 方法执行后的返回值（仅当方法执行之后的判断有效，如 ‘unless’，’cache put’的表达式 ’cache evict’的属性beforeInvocation=false | #result，#result.id(返回结果的属性名)           |
+
+
+
+##  使用RestTemplate操作redis
+
+1.redisTemplate.opsForValue();//操作字符串
+
+2.redisTemplate.opsForHash();//操作hash
+
+3.redisTemplate.opsForList();//操作list
+
+4.redisTemplate.opsForSet();//操作set
+
+5.redisTemplate.opsForZSet();//操作有序set
+
+其他操作不一一列举
+
+
+
+## 测试
+
+首先我们先编写一个小Demo，我持久化层使用的是mybatis,这里代码很简单，就直接越过。
+
+![](https://img-blog.csdnimg.cn/20200920212145547.png#pic_left)
+然后看一下我们service层代码，在方法上添加了@Cacheable注解
+
+```java
+@Service
+public class DepartmentService {
+    @Autowired
+    private DepartmentMapper departmentMapper;
+
+
+    @Cacheable(cacheNames = "dep",key = "#id")
+    public Department getDep(Integer id){
+        Department byId = departmentMapper.getById(id);
+        return byId;
+    }
+}
+```
+编写测试方法，看打印的日志结果
+
+```java
+	@Test
+    void contextLoads() {
+        Department dep = departmentService.getDep(1);
+        System.out.println(dep);
+    }
+```
+第一次执行从数据库里查数据，日志打印出SQL语句
+![](https://img-blog.csdnimg.cn/20200920212903368.png#pic_left)
+第二次执行，日志没有打印SQL语句，说明是从redis缓存取数据
+![](https://img-blog.csdnimg.cn/20200920213756625.png?t_70#pic_left)
+而我们也可以打开Redis Desktop Manager查看，数据的确存进缓存中了
+![](https://img-blog.csdnimg.cn/20200920213949479.png?t_70#pic_left)
+

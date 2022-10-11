@@ -1,0 +1,463 @@
+---
+title: Spring Security OAuth2 带有用于代码交换的证明密钥 (PKCE) 的授权码流
+date: 2022-07-17 12:21:50
+tags: ['OAuth2', 'SpringSecurity']
+draft: false
+authors: ['default']
+---
+
+## Spring Security OAuth2 带有用于代码交换的证明密钥 (PKCE) 的授权码流
+
+![](/static/images/blogs/oauth2.png)
+
+### 概述
+
+OAuth2依据是否能持有客户端密钥，将客户端分为两种类型：**公共客户端**和**保密客户端**。
+
+**保密客户端**在服务器上运行，在前面介绍OAuth2文章中Spring Boot创建的应用程序是保密客户端类型的示例。首先它们在服务器上运行，并且通常位于具有其他保护措施防火墙或网关的后面。
+
+**公共客户端**的代码一般会以某种形式暴露给最终用户，要么是在浏览器中下载执行，要么是直接在用户的设备上运行。例如**原生应用**是直接在最终用户的设备（计算机或者移动设备）上运行的应用。这类应用在使用OAuth2协议时，我们无法保证为此应用颁发的客户端密钥能安全的存储，因为这些应用程序在运行之前会完全下载到设备上，反编译应用程序将完全显示客户端密钥。
+
+同样存在此安全问题还有**单页应用**（SPA），浏览器本身是一个不安全的环境，一旦你加载JavaScript应用程序，浏览器将会下载整个源代码以便运行它，整个源代码，包括其中的任何 客户端密钥，都将可见。如果你构建一个拥有100000名用户的应用程序，那么很可能这些用户中的一部分将感染恶意软件或病毒，并泄漏客户端密钥。
+
+你可能会想，“如果我通过将客户端密钥拆分为几个部分进行混淆呢？”这不可否认会为你争取点时间，但真正有决心的人仍可能会弄清楚。
+
+
+
+为了规避这种安全风险，最好使用代码交换证明密钥(PKCE)。
+
+### Proof Key for Code Exchange
+
+PKCE 有自己独立的[规范](https://tools.ietf.org/html/rfc7636)。它使应用程序能够在公共客户端中使用授权码流程。
+
+![](/static/images/blogs/PKCE.drawio.png)
+
+1. 用户在客户端请求资源。
+2. 客户端创建并记录名为 code_verifier 的秘密信息，然后客户端根据 code_verifier 计算出 code_challenge，它的值可以是 code_verifier，也可以是 code_verifier 的 SHA-256 散列，但是应该优先考虑使用密码散列，因为它能防止验证器本身遭到截获。
+
+3. 客户端将 code_challenge 以及可选的 code_challenge_method(一个关键字，表 示原文或者 SHA-256 散列)与常规的授权请求参数一起发送给授权服务器。
+4. 授权服务器将用户重定向到登录页面。
+5. 用户使进行身份验证，并且可能会看到一个同意页面，其中列出了 授权服务器将授予客户端的权限。
+6. 授权服务器将 code_challenge 和 code_challenge_method(如果有 的话)记录下来。授权服务器会将这些信息与颁发的授权码关联起来，并携带code重定向回客户端。
+
+7. 客户端接收到授权码之后，携带之前生成的 code_verifier 执行令牌请求。
+
+8. 授权服务器根据code_verifier计算出 code_challenge，并检查是否与最初提交的code_challenge一致。
+9. 授权服务器向客户端发送令牌。
+10. 客户端向受保护资源发送令牌。
+11. 受保护资源向客户端返回资源。
+
+
+
+### 使用Spring Authorization Server搭建授权服务器
+
+本节我们将使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server)搭建一个授权服务器，并注册一个客户端使之支持PKCE。
+
+#### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-oauth2-authorization-server</artifactId>
+  <version>0.3.1</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+```
+
+#### 配置
+
+首先很简单，我们将创建application.yml文件，并指定授权服务器端口为8080：
+
+```yaml
+server:
+  port: 8080
+```
+
+<br />
+
+之后我们将创建一个`OAuth2ServerConfig`配置类，并在此类中我们将创建OAuth2授权服务所需特定Bean：
+
+```java
+@Bean
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+  OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+  return http.exceptionHandling(exceptions -> exceptions.
+                                authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+}
+
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+  RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+    .clientId("relive-client")
+    .clientAuthenticationMethods(s -> {
+      s.add(ClientAuthenticationMethod.NONE);//客户端认证模式为none
+    })
+    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+    .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-pkce")
+    .scope("message.read")
+    .clientSettings(ClientSettings.builder()
+                    .requireAuthorizationConsent(true)
+                    .requireProofKey(true) //仅支持PKCE
+                    .build())
+    .tokenSettings(TokenSettings.builder()
+                   .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED) // 生成JWT令牌
+                   .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                   .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                   .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                   .reuseRefreshTokens(true)
+                   .build())
+    .build();
+
+  return new InMemoryRegisteredClientRepository(registeredClient);
+}
+
+@Bean
+public ProviderSettings providerSettings() {
+  return ProviderSettings.builder()
+    .issuer("http://127.0.0.1:8080")
+    .build();
+}
+
+@Bean
+public JWKSource<SecurityContext> jwkSource() {
+  RSAKey rsaKey = Jwks.generateRsa();
+  JWKSet jwkSet = new JWKSet(rsaKey);
+  return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+}
+
+static class Jwks {
+
+  private Jwks() {
+  }
+
+  public static RSAKey generateRsa() {
+    KeyPair keyPair = KeyGeneratorUtils.generateRsaKey();
+    RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+    RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+    return new RSAKey.Builder(publicKey)
+      .privateKey(privateKey)
+      .keyID(UUID.randomUUID().toString())
+      .build();
+  }
+}
+
+static class KeyGeneratorUtils {
+
+  private KeyGeneratorUtils() {
+  }
+
+  static KeyPair generateRsaKey() {
+    KeyPair keyPair;
+    try {
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+      keyPairGenerator.initialize(2048);
+      keyPair = keyPairGenerator.generateKeyPair();
+    } catch (Exception ex) {
+      throw new IllegalStateException(ex);
+    }
+    return keyPair;
+  }
+}
+```
+
+**请注意**在创建*RegisteredClient*注册客户端类中，1.我们没有定义`client_secret`;2.客户端认证模式指定为none；3.requireProofKey()设置为true，此客户端仅支持PKCE。
+
+其余配置我这里就不一一说明，可以参考[之前文章](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)。
+
+
+
+<br />
+
+接下来，我们创建一个Spring Security的配置类，指定Form表单认证和设置用户名密码：
+
+```java
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .formLogin(withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    UserDetailsService users() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("password")
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+}
+
+```
+
+
+
+至此我们就已经配置好了一个简单的授权服务器。
+
+
+
+### OAuth2客户端
+
+本节中我们使用[Spring Security](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html)创建一个客户端，此客户端通过PKCE授权码流向授权服务器请求授权，并将获取的access_token发送到资源服务。
+
+#### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-client</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-webflux</artifactId>
+  <version>5.3.9</version>
+</dependency>
+<dependency>
+  <groupId>io.projectreactor.netty</groupId>
+  <artifactId>reactor-netty</artifactId>
+  <version>1.0.9</version>
+</dependency>
+
+```
+
+
+
+#### 配置
+
+首先我们将在application.yml中配置客户端信息，并指定服务端口号为8070：
+
+```yaml
+server:
+  port: 8070
+  servlet:
+    session:
+      cookie:
+        name: CLIENT-SESSION
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          messaging-client-pkce:
+            provider: client-provider
+            client-id: relive-client
+            client-secret: relive-client
+            authorization-grant-type: authorization_code
+            client-authentication-method: none
+            redirect-uri: "http://127.0.0.1:8070/login/oauth2/code/{registrationId}"
+            scope: message.read
+            client-name: messaging-client-pkce
+        provider:
+          client-provider:
+            authorization-uri: http://127.0.0.1:8080/oauth2/authorize
+            token-uri: http://127.0.0.1:8080/oauth2/token
+
+```
+
+<br />
+
+接下来，我们创建Spring Security配置类，启用OAuth2客户端。
+
+```java
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        //便于测试，将权限开放
+                        authorizeRequests.anyRequest().permitAll()
+                )
+                .oauth2Client(withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+        return WebClient.builder()
+                .filter(oauth2Client)
+                .build();
+    }
+
+    @Bean
+    OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+                                                          OAuth2AuthorizedClientRepository authorizedClientRepository) {
+
+        OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
+                .builder()
+                .authorizationCode()
+                .refreshToken()
+                .build();
+        DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+        authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+
+        return authorizedClientManager;
+    }
+}
+
+```
+
+上述配置类中我们通过*oauth2Client(withDefaults())*启用OAuth2客户端。并创建一个WebClient实例用于向资源服务器执行HTTP请求。`OAuth2AuthorizedClientManager`这是协调OAuth2授权码请求的高级控制器类，不过授权码流程并不是由它控制，可以查看它所管理的*Provider*实现类*AuthorizationCodeOAuth2AuthorizedClientProvider*中并没有涉及相关授权码流程代码逻辑，对于Spring Security授权码模式涉及核心接口流程我会放在之后的文章统一介绍。回到*OAuth2AuthorizedClientManager*类中，我们可以看到同时还指定了*refreshToken()*,它实现了刷新token逻辑，将在请求资源服务过程中access_token过期后将刷新token，前提是refresh_token没有过期，否则你将重新执行OAuth2授权码流程。
+
+<br />
+
+接下来，我们创建一个Controller类，使用WebClient请求资源服务：
+
+```java
+@RestController
+public class PkceClientController {
+
+    @Autowired
+    private WebClient webClient;
+
+    @GetMapping(value = "/client/test")
+    public List getArticles(@RegisteredOAuth2AuthorizedClient("messaging-client-pkce") OAuth2AuthorizedClient authorizedClient) {
+        return this.webClient
+                .get()
+                .uri("http://127.0.0.1:8090/resource/article")
+                .attributes(oauth2AuthorizedClient(authorizedClient))
+                .retrieve()
+                .bodyToMono(List.class)
+                .block();
+    }
+}
+```
+
+
+
+### 资源服务器
+
+本节中，我们将使用Spring Security搭建一个资源服务器。
+
+### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+  <version>2.6.7</version>
+</dependency>
+```
+
+#### 配置
+
+通过application.yml配置资源服务器服务端口8070，并指定授权服务器jwk uri，用于获取公钥信息验证token令牌：
+
+```yaml
+server:
+  port: 8090
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://127.0.0.1:8080/oauth2/jwks
+```
+
+
+
+接下来配置Spring Security配置类，指定受保护端点访问权限：
+
+```java
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain defaultSecurityFilter(HttpSecurity http) throws Exception {
+        http.requestMatchers()
+                .antMatchers("/resource/article")
+                .and()
+                .authorizeHttpRequests((authorize) -> authorize
+                        .antMatchers("/resource/article")
+                        .hasAuthority("SCOPE_message.read")
+                        .mvcMatchers()
+                )
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+        return http.build();
+    }
+}
+```
+
+上述配置类中指定/resource/article必须拥有message.read权限才能访问，并配置资源服务使用JWT身份验证。
+
+<br />
+
+之后我们将创建Controller类，作为受保护端点：
+
+```java
+@RestController
+public class ArticleRestController {
+
+    @GetMapping("/resource/article")
+    public List<String> article() {
+        return Arrays.asList("article1", "article2", "article3");
+    }
+}
+```
+
+
+
+### 访问资源列表
+
+启动所有服务后，在浏览器中输入 http://127.0.0.1:8070/client/test ，通过授权服务器认证后，您将在页面中看到以下输出信息：
+
+```json
+["article1","article2","article3"]
+```
+
+
+
+### 结论
+
+在Spring Security目前版本中保密客户端的 PKCE 已经成为默认行为。在保密客户端授权码模式中同样可以使用PKCE。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-pkce)获得。

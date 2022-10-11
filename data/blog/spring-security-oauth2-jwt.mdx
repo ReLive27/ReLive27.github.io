@@ -1,0 +1,501 @@
+---
+title: 将JWT与Spring Security OAuth2结合使用
+date: 2022-06-26 15:58:00
+tags: ['OAuth2', 'SpringSecurity']
+draft: false
+authors: ['default']
+---
+
+
+##  将JWT与Spring Security OAuth2结合使用
+
+### 概述
+
+OAuth 2.0 是行业标准的授权协议。OAuth 2.0 专注于客户端开发人员的简单性，同时为 Web 应用程序、桌面应用程序、移动电话和客厅设备提供特定的授权流程。
+
+OAuth 授权服务器负责对用户进行身份验证并发布包含用户数据和适当访问策略的访问令牌。
+
+下面我们将使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn)构建一个简单的授权服务器。
+
+### OAuth2授权服务器实现
+
+让我们从OAuth2授权服务器配置实现开始。
+
+
+
+#### maven依赖
+
+```xml
+ <dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-security</artifactId>
+   <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-oauth2-authorization-server</artifactId>
+  <version>0.3.1</version>
+</dependency>
+```
+
+
+
+#### 配置
+
+首先让我们通过application.yml配置数据库连接信息.
+
+```yml
+spring:
+  application:
+    name: auth-server
+  datasource:
+    druid:
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/integrated_oauth?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: <<username>> # 修改用户名
+      password: <<password>> # 修改密码
+```
+
+之后我们创建一个`AuthorizationServerConfig`配置类，在此类中我们将创建OAuth2授权服务器所需特定的Bean。第一个将是客户端服务存储库，我们使用*RegisteredClient*构建器类型创建一个客户端，并将它持久化到数据库中。
+
+```java
+ @Bean
+    public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
+        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("relive-client")
+                .clientSecret("{noop}relive-client")
+                .clientAuthenticationMethods(s -> {
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+                })
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+                .scope("message.read")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)
+                        .requireProofKey(false)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                        .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                        .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                        .reuseRefreshTokens(true)
+                        .build())
+                .build();
+
+        JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
+        registeredClientRepository.save(registeredClient);
+
+        return registeredClientRepository;
+    }
+```
+
+我们配置的属性是：
+
+- id--RegisteredClient唯一标识
+- clientId--客户端标识符
+- clientSecret--客户端秘密
+- clientAuthenticationMethods--客户端可能使用的身份验证方法。支持的值为`client_secret_basic`、`client_secret_post`、`private_key_jwt`、`client_secret_jwt`和`none`
+- authorizationGrantTypes--客户端可以使用的授权类型。支持的值为`authorization_code`、`client_credentials`和`refresh_token`
+- redirectUris--客户端已注册重定向 URI
+- scopes--允许客户端请求的范围。
+- clientSettings--客户端的自定义设置
+
+- tokenSettings--发布给客户端的 OAuth2 令牌的自定义设置
+
+
+
+<br />
+
+接下来让我们配置存储新授权和查询现有授权的中心组件OAuth2AuthorizationService。
+
+```java
+   @Bean
+    public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+    }
+```
+
+
+
+针对OAuth2 授权请求的授权“同意”，Spring提供了*OAuth2AuthorizationConsentService*存储新授权同意和查询现有授权同意的组件。
+
+```java
+   @Bean
+    public OAuth2AuthorizationConsentService authorizationConsentService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository);
+    }
+```
+
+
+
+接下来让我们创建一个bean，配置OAuth2授权服务其他默认配置，并以用来对与未认证的授权请求，将该请求重定向到登录页面。
+
+```java
+   @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        return http.exceptionHandling(exceptions -> exceptions.
+                authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+    }
+```
+
+
+
+每个授权服务器都需要用于令牌的签名密钥，让我们生成一个RSA密钥：
+
+```java
+final class KeyGeneratorUtils {
+
+    private KeyGeneratorUtils() {
+    }
+
+    static KeyPair generateRsaKey() {
+        KeyPair keyPair;
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            keyPair = keyPairGenerator.generateKeyPair();
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+        return keyPair;
+    }
+}
+```
+
+```java
+public final class Jwks {
+
+	private Jwks() {
+	}
+
+	public static RSAKey generateRsa() {
+		KeyPair keyPair = KeyGeneratorUtils.generateRsaKey();
+		RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+		RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+		return new RSAKey.Builder(publicKey)
+				.privateKey(privateKey)
+				.keyID(UUID.randomUUID().toString())
+				.build();
+	}
+}
+```
+
+```java
+ @Bean
+    public JWKSource<SecurityContext> jwkSource() {
+        RSAKey rsaKey = Jwks.generateRsa();
+        JWKSet jwkSet = new JWKSet(rsaKey);
+        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+    }
+```
+
+处理完令牌的签名密钥，授权服务器还需要一个颁发者URL，我们可以通过*ProviderSettings*创建：
+
+```java
+    @Bean
+    public ProviderSettings providerSettings() {
+        return ProviderSettings.builder()
+                .issuer("http://127.0.0.1:8080")
+                .build();
+    }
+```
+
+
+
+最后我们将启用Spring Security安全配置类，以保护我们的服务。
+
+```java
+@EnableWebSecurity
+@Configuration
+public class DefaultSecurityConfig {
+
+
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .formLogin(withDefaults())
+        return http.build();
+    }
+
+  //...
+}
+```
+
+这里*authorizeRequests*.*anyRequest()*.*authenticated*()让所有请求都需要认证，并提供基于Form表单的身份认证。
+
+<br />
+
+我们还需要定义测试使用的用户信息，以下创建一个基于内存的用户信息存储库。
+
+```java
+    @Bean
+    UserDetailsService users() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("password")
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+```
+
+
+
+### 资源服务器实现
+
+现在我们将创建一个资源服务器，服务中的API接口只允许通过OAuth2授权服务器身份验证的请求。
+
+#### maven依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+  <version>2.6.7</version>
+</dependency>
+```
+
+
+
+#### 配置
+
+首先让我们通过application.yml配置服务端口。
+
+```yml
+server:
+  port: 8090
+```
+
+接下来，进行OAuth2安全配置，我们需要使用之前授权服务器在*ProviderSettings*中设置的issuerUri。
+
+```java
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:8080
+```
+
+资源服务器将使用此Uri进一步进行自我配置，发现授权服务器的公钥，并传入用于验证JWT的JwtDecoder。此过程的结果是授权服务器必须启动并接收请求才能使资源服务器成功启动。
+
+<br />
+
+如果资源服务器必须能够独立于授权服务器启动，那么可以提供`jwk-set-uri`。这将是我们进一步在OAuth2安全配置中添加属性：
+
+```yml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:8080
+          jwk-set-uri: http://127.0.0.1:8080/oauth2/jwks
+
+```
+
+现在我们可以设置Spring Security安全配置，对服务资源的每个请求都应该被授权并具有适当的权限：
+
+```java
+@EnableWebSecurity
+public class ResourceServerConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.requestMatchers()
+                .antMatchers("/resource/test/**")
+                .and()
+                .authorizeRequests()
+                .mvcMatchers("/resource/test/**")
+                .access("hasAuthority('SCOPE_message.read')")
+                .and()
+                .oauth2ResourceServer()
+                .jwt();
+        return http.build();
+    }
+}
+```
+
+
+
+<br />
+
+最后，我们将创建一个 REST 控制器，它将返回jwt的claims信息。
+
+```java
+@RestController
+public class ResourceServerTestController {
+
+    @GetMapping("/resource/test")
+    public Map<String, Object> getArticles(@AuthenticationPrincipal Jwt jwt) {
+        return jwt.getClaims();
+    }
+}
+```
+
+
+
+### OAuth2客户端
+
+现在我们要创建一个客户端，它首先向授权服务器请求授权获取访问令牌，在访问资源服务器对应资源。
+
+#### maven依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-client</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-webflux</artifactId>
+  <version>5.3.9</version>
+</dependency>
+```
+
+
+
+#### 配置
+
+首先我们将要在application.yml中配置客户端的访问端口8070。
+
+```yml
+server:
+  port: 8070
+```
+
+
+
+接下来我们将定义OAuth2客户端的配置属性：
+
+```yaml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          messaging-client-authorization-code:
+            provider: client-provider
+            client-id: relive-client
+            client-secret: relive-client
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8070/login/oauth2/code/{registrationId}"
+            scope: message.read
+            client-name: messaging-client-authorization-code
+        provider:
+          client-provider:
+            authorization-uri: http://127.0.0.1:8080/oauth2/authorize
+            token-uri: http://127.0.0.1:8080/oauth2/token
+```
+
+现在让我们创建一个WebClient实例用于向资源服务器执行HTTP请求：
+
+```java
+  @Bean
+    WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+        return WebClient.builder()
+                .apply(oauth2Client.oauth2Configuration())
+                .build();
+    }
+```
+
+WebClient添加了一个OAuth2授权过滤器，需要OAuth2AuthorizedClientManager作为依赖项，在此处只配置了授权码和刷新token，如有需要可以添加其他模式：
+
+```java
+@Bean
+    OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+                                                          OAuth2AuthorizedClientRepository authorizedClientRepository) {
+
+        //可以扩展其他模式
+        OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
+                .builder()
+                .authorizationCode()
+                .refreshToken()
+                .build();
+        DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+        authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+
+        return authorizedClientManager;
+    }
+```
+
+最后，我们将配置Spring Security安全配置：
+
+```java
+ @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        //便于测试，将权限开放
+                        authorizeRequests.anyRequest().permitAll()
+                )
+                .oauth2Client(withDefaults());
+        return http.build();
+    }
+```
+
+这里我们将客户端API权限全部放开，但是在实际情况下，客户端服务是需要认证的，OAuth2协议本身是授权协议，并不关心认证的具体表现形式，你也可以向授权服务器一样添加简单的*表单认证*。
+
+#### 访问资源列表
+
+最后，我们创建一个控制器，我们将使用之前配置的WebClient向我们资源服务器发起HTTP请求：
+
+```java
+@RestController
+public class ClientTestController {
+    @Autowired
+    private WebClient webClient;
+
+    @GetMapping(value = "/client/test")
+    public Map<String, Object> getArticles(@RegisteredOAuth2AuthorizedClient("messaging-client-authorization-code") OAuth2AuthorizedClient authorizedClient) {
+        return this.webClient
+                .get()
+                .uri("http://127.0.0.1:8090/resource/test")
+                .attributes(oauth2AuthorizedClient(authorizedClient))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
+}
+```
+
+在上面示例中，我们使用@*RegisteredOAuth2AuthorizedClient*注解绑定*OAuth2AuthorizedClient*，并以触发OAuth2授权码模式流程获取访问令牌。
+
+### 结论
+
+本例主要演示在使用OAuth2进行两个服务安全通信，尤其是在复杂的互联网场景中，客户端服务和资源服务恰好由不同的平台提供，OAuth2非常善于获取用户的委托决策，很多方面他都比其他方案更简单，更安全。<br />
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-jwt)获得。

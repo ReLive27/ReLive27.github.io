@@ -1,0 +1,359 @@
+---
+title: Spring Security 持久化OAuth2客户端
+date: 2022-07-03 11:55:25
+tags: ['OAuth2', 'SpringSecurity']
+draft: false
+authors: ['default']
+---
+
+
+## Spring Security 持久化OAuth2客户端
+
+在[之前文章中](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)介绍过了客户端通过向授权服务器（使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn)）请求授权并访问资源服务器受保护资源。在创建OAuth2客户端服务时，客户端注册通常从`application.yml `文件中自动加载，Spring 自动配置使用`OAuth2ClientProperties`在`spring.security.oauth2.client.registration.[registrationId]`创建一个`ClientRegistration`并实例化`ClientRegistrationRepository`。
+
+以下Spring自动配置`OAuth2ClientRegistrationRepositoryConfiguration`代码如下：
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@EnableConfigurationProperties({OAuth2ClientProperties.class})
+@Conditional({ClientsConfiguredCondition.class})
+class OAuth2ClientRegistrationRepositoryConfiguration {
+    OAuth2ClientRegistrationRepositoryConfiguration() {
+    }
+
+    @Bean
+    @ConditionalOnMissingBean({ClientRegistrationRepository.class})
+    InMemoryClientRegistrationRepository clientRegistrationRepository(OAuth2ClientProperties properties) {
+        List<ClientRegistration> registrations = new ArrayList(OAuth2ClientPropertiesRegistrationAdapter.getClientRegistrations(properties).values());
+        return new InMemoryClientRegistrationRepository(registrations);
+    }
+}
+```
+
+如您所见，`ClientRegistrationRepository`默认实现并仅有一个实现类是`InMemoryClientRegistrationRepository`，它将ClientRegistration存储在内存中，而在生产环境中此方式可能会有一定局限性。
+
+
+
+在本文中您将了解如何通过扩展ClientRegistrationRepository实现OAuth2客户端持久化。
+
+
+
+### OAuth2客户端服务实现
+
+在本节中，您将创建一个简单的OAuth2客户端服务，并通过数据库存储OAuth2客户端信息，现在看代码！
+
+#### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jdbc</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-client</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-webflux</artifactId>
+  <version>5.3.9</version>
+</dependency>
+<dependency>
+  <groupId>io.projectreactor.netty</groupId>
+  <artifactId>reactor-netty</artifactId>
+  <version>1.0.9</version>
+</dependency>
+
+<dependency>
+  <groupId>mysql</groupId>
+  <artifactId>mysql-connector-java</artifactId>
+  <version>8.0.21</version>
+</dependency>
+
+...
+```
+
+#### 配置
+
+首先让我们通过application.yml配置服务端口信息和数据库连接信息：
+
+```yaml
+server:
+  port: 8070
+
+spring:
+  datasource:
+    druid:
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/persistence_oauth2_client?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: <<username>> # 修改用户名
+      password: <<password>> # 修改密码
+```
+
+
+
+接下来我们根据`ClientRegistration`来创建数据库表用于存储OAuth2客户端信息：
+
+```sql
+CREATE TABLE `oauth2_registered_client`
+(
+    `registration_id`                 varchar(100)  NOT NULL,
+    `client_id`                       varchar(100)  NOT NULL,
+    `client_secret`                   varchar(200)  DEFAULT NULL,
+    `client_authentication_method`    varchar(100)  NOT NULL,
+    `authorization_grant_type`        varchar(100)  NOT NULL,
+    `client_name`                     varchar(200)  DEFAULT NULL,
+    `redirect_uri`                    varchar(1000) NOT NULL,
+    `scopes`                          varchar(1000) NOT NULL,
+    `authorization_uri`               varchar(1000) DEFAULT NULL,
+    `token_uri`                       varchar(1000) NOT NULL,
+    `jwk_set_uri`                     varchar(1000) DEFAULT NULL,
+    `issuer_uri`                      varchar(1000) DEFAULT NULL,
+    `user_info_uri`                   varchar(1000) DEFAULT NULL,
+    `user_info_authentication_method` varchar(100)  DEFAULT NULL,
+    `user_name_attribute_name`        varchar(100)  DEFAULT NULL,
+    `configuration_metadata`          varchar(2000) DEFAULT NULL,
+    PRIMARY KEY (`registration_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+下面将是我们通过实现*ClientRegistrationRepository*扩展的*JdbcClientRegistrationRepository*：
+
+```java
+public class JdbcClientRegistrationRepository implements ClientRegistrationRepository {
+    private static final String COLUMN_NAMES = "registration_id,client_id,client_secret,client_authentication_method,authorization_grant_type,client_name,redirect_uri,scopes,authorization_uri,token_uri,jwk_set_uri,issuer_uri,user_info_uri,user_info_authentication_method,user_name_attribute_name,configuration_metadata";
+    private static final String TABLE_NAME = "oauth2_registered_client";
+    private static final String LOAD_CLIENT_REGISTERED_SQL = "SELECT " + COLUMN_NAMES + " FROM " + TABLE_NAME + " WHERE ";
+    private static final String INSERT_CLIENT_REGISTERED_SQL = "INSERT INTO " + TABLE_NAME + "(" + COLUMN_NAMES + ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    private static final String UPDATE_CLIENT_REGISTERED_SQL = "UPDATE " + TABLE_NAME + " SET client_id = ?,client_secret = ?,client_authentication_method = ?,authorization_grant_type = ?,client_name = ?,redirect_uri = ?,scopes = ?,authorization_uri = ?,token_uri = ?,jwk_set_uri = ?,issuer_uri = ?,user_info_uri = ?,user_info_authentication_method = ?,user_name_attribute_name = ? WHERE registration_id = ?";
+    private final JdbcOperations jdbcOperations;
+    private RowMapper<ClientRegistration> clientRegistrationRowMapper;
+    private Function<ClientRegistration, List<SqlParameterValue>> clientRegistrationListParametersMapper;
+
+
+    public JdbcClientRegistrationRepository(JdbcOperations jdbcOperations) {
+        Assert.notNull(jdbcOperations, "JdbcOperations can not be null");
+        this.jdbcOperations = jdbcOperations;
+        this.clientRegistrationRowMapper = new ClientRegistrationRowMapper();
+        this.clientRegistrationListParametersMapper = new ClientRegistrationParametersMapper();
+    }
+
+    @Override
+    public ClientRegistration findByRegistrationId(String registrationId) {
+        Assert.hasText(registrationId, "registrationId cannot be empty");
+        return this.findBy("registration_id = ?", registrationId);
+    }
+
+    private ClientRegistration findBy(String filter, Object... args) {
+        List<ClientRegistration> result = this.jdbcOperations.query(LOAD_CLIENT_REGISTERED_SQL + filter, this.clientRegistrationRowMapper, args);
+        return !result.isEmpty() ? result.get(0) : null;
+    }
+
+
+    public void save(ClientRegistration clientRegistration) {
+        Assert.notNull(clientRegistration, "clientRegistration cannot be null");
+        ClientRegistration existingClientRegistration = this.findByRegistrationId(clientRegistration.getRegistrationId());
+        if (existingClientRegistration != null) {
+            this.updateRegisteredClient(clientRegistration);
+        } else {
+            this.insertClientRegistration(clientRegistration);
+        }
+    }
+
+    private void updateRegisteredClient(ClientRegistration clientRegistration) {
+        List<SqlParameterValue> parameterValues = this.clientRegistrationListParametersMapper.apply(clientRegistration);
+        PreparedStatementSetter statementSetter = new ArgumentPreparedStatementSetter(parameterValues.toArray());
+        this.jdbcOperations.update(UPDATE_CLIENT_REGISTERED_SQL, statementSetter);
+    }
+
+    private void insertClientRegistration(ClientRegistration clientRegistration) {
+        List<SqlParameterValue> parameterValues = this.clientRegistrationListParametersMapper.apply(clientRegistration);
+        PreparedStatementSetter statementSetter = new ArgumentPreparedStatementSetter(parameterValues.toArray());
+        this.jdbcOperations.update(INSERT_CLIENT_REGISTERED_SQL, statementSetter);
+    }
+
+  //...省略部分代码
+}
+```
+
+之后我们将创建`SecurityConfig`安全配置类，在此类中创建OAuth2 Client所需特定的Bean。首先我们将实例化上述自定义的*JdbcClientRegistrationRepository*：
+
+```java
+@Bean
+public ClientRegistrationRepository clientRegistrationRepository(JdbcTemplate jdbcTemplate) {
+  return new JdbcClientRegistrationRepository(jdbcTemplate);
+}
+```
+
+**ClientRegistration**：表示使用 OAuth 2.0 或 OpenID Connect (OIDC) 注册的客户端。它包含有关客户端的所有基本信息，例如客户端 ID、客户端机密、授权类型和各种 URI。
+
+**ClientRegistrationRepository**：这是一个包含*ClientRegistrations*并负责持久化。
+
+
+
+<br />
+
+接下来配置OAuth2AuthorizedClient管理类*OAuth2AuthorizedClientService*：
+
+```java
+@Bean
+public OAuth2AuthorizedClientService authorizedClientService(
+  JdbcTemplate jdbcTemplate,
+  ClientRegistrationRepository clientRegistrationRepository) {
+  return new JdbcOAuth2AuthorizedClientService(jdbcTemplate, clientRegistrationRepository);
+}
+```
+
+**OAuth2AuthorizedClient**：表示授权客户端。这是一个包含客户端注册但添加身份验证信息的组合类。
+
+**OAuth2AuthorizedClientService**：负责`OAuth2AuthorizedClient`在 Web 请求之间进行持久化。
+
+
+
+<br />
+
+定义*JdbcOAuth2AuthorizedClientService*需要创建所需数据表，你可以在[OAuth2 Client Schema](https://docs.spring.io/spring-security/site/docs/5.4.5/reference/html5/#dbschema-oauth2-client)中获取表定义：
+
+```sql
+CREATE TABLE oauth2_authorized_client
+(
+    client_registration_id  varchar(100)                            NOT NULL,
+    principal_name          varchar(200)                            NOT NULL,
+    access_token_type       varchar(100)                            NOT NULL,
+    access_token_value      blob                                    NOT NULL,
+    access_token_issued_at  timestamp                               NOT NULL,
+    access_token_expires_at timestamp                               NOT NULL,
+    access_token_scopes     varchar(1000) DEFAULT NULL,
+    refresh_token_value     blob          DEFAULT NULL,
+    refresh_token_issued_at timestamp     DEFAULT NULL,
+    created_at              timestamp     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (client_registration_id, principal_name)
+);
+```
+
+
+
+接下来配置*OAuth2AuthorizedClientRepository*容器类：
+
+```java
+@Bean
+public OAuth2AuthorizedClientRepository authorizedClientRepository(
+  OAuth2AuthorizedClientService authorizedClientService) {
+  return new AuthenticatedPrincipalOAuth2AuthorizedClientRepository(authorizedClientService);
+}
+```
+
+**OAuth2AuthorizedClientRepository**:是一个容器类，用于在请求之间保存和持久化授权客户端。这里通过*JdbcOAuth2AuthorizedClientService*将客户端存储在数据库中。
+
+
+
+<br />
+
+接下来实例化包含授权流程的逻辑的管理器类：
+
+```java
+@Bean
+OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+                                                      OAuth2AuthorizedClientRepository authorizedClientRepository) {
+
+  OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
+    .builder()
+    .authorizationCode()
+    .refreshToken()
+    .build();
+  DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+  authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+
+  return authorizedClientManager;
+}
+```
+
+**OAuth2AuthorizedClientManager**：是包含处理授权流程的逻辑的管理器类。最重要的是，它使用`OAuth2AuthorizedClientProvider`处理不同授权类型和 OAuth 2.0 提供者的实际请求逻辑。它还委托`OAuth2AuthorizedClientRepository`在客户端授权成功或失败时调用成功或失败处理程序。
+
+<br />
+
+现在让我们创建一个WebClient实例用于向资源服务器执行HTTP请求：
+
+```
+ @Bean
+    WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+        return WebClient.builder()
+                .apply(oauth2Client.oauth2Configuration())
+                .build();
+    }
+```
+
+
+
+<br />
+
+最后，我们将配置Spring Security安全配置：
+
+```
+ @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .formLogin(login -> {
+                    login.loginPage("/login").permitAll();
+                })
+                .oauth2Client(withDefaults());
+        return http.build();
+    }
+```
+
+这里配置所有请求需要认证授权，提供Form表单认证方式，并通过[thymeleaf](https://www.thymeleaf.org/)自定义登录模版，此处代码并不再本文讲解范围内，以下将不展示具体细节。
+
+
+
+#### 访问资源列表
+
+我们将创建一个*PersistenceClientController*，并使用WebClient向资源服务器发起HTTP请求：
+
+```java
+@RestController
+public class PersistenceClientController {
+    @Autowired
+    private WebClient webClient;
+
+    @GetMapping(value = "/client/test")
+    public List<String> getArticles(@RegisteredOAuth2AuthorizedClient("messaging-client-authorization-code") OAuth2AuthorizedClient authorizedClient) {
+        return this.webClient
+                .get()
+                .uri("http://127.0.0.1:8090/resource/article")
+                .attributes(oauth2AuthorizedClient(authorizedClient))
+                .retrieve()
+                .bodyToMono(List.class)
+                .block();
+    }
+}
+```
+
+<br />
+
+在本文中，您看到了OAuth2客户端服务持久化到数据库的实现方法，对于其他授权服务器和资源服务器配置将不再讲解，如果您感兴趣可以参考	此文章[将JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)。
+
+
+
+### 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-persistence-client)获得。

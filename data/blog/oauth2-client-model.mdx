@@ -1,0 +1,277 @@
+---
+title: Spring Security OAuth2客户端凭据授权
+date: 2022-07-09 18:22:26
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+
+## Spring Security OAuth2客户端凭据授权
+
+### 概述
+
+在没有明确的资源拥有者，或对于客户端来说资源拥有者不可区分，该怎么办？这是一种相当常见的场景。比如后端系统之间需要直接通信时，将使用**客户端凭据授权**。
+
+OAuth2.0文档描述客户端凭据授权：
+
+> 客户端使用客户端凭据授予类型来获取用户上下文之外的访问令牌。这通常被客户端用来访问关于他们自己的资源，而不是访问用户的资源。
+
+
+
+在本文中，您将了解使用Spring Security构建OAuth2客户端凭据授权，在没有经过身份验证的用户的情况下允许服务安全的相互操作。
+
+
+
+OAuth2客户端凭据授权相比于授权码授权更直接，它通常用于CRON任务和其他类型的后端数据处理等操作。
+
+
+
+### 客户端凭据授予流程
+
+当应用程序请求访问令牌以访问其自己的资源时，将使用客户端凭据授权，而不是代表用户。
+
+#### 请求参数
+
+##### grant_type（必需）
+
+该`grant_type`参数必须设置为`client_credentials`。
+
+##### scope（可选的）
+
+您的服务可以支持客户端凭据授予的不同范围。
+
+##### 客户端身份验证（必需）
+
+客户端需要对此请求进行身份验证。通常，该服务将允许附加请求参数`client_id`和`client_secret`，或接受 HTTP Basic auth 标头中的客户端 ID 和机密。
+
+![](/static/images/blogs/client-credentials.png)
+
+
+
+### OAuth2授权服务器
+
+这里我们使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn)构建OAuth2授权服务器，具体详细细节我这里就不重复赘述，可以参考此文[JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)中授权服务器搭建，这里仅说明与之前授权码授予流程授权服务配置的不同之处。
+
+#### 配置
+
+在我们使用*RegisteredClient*构建器类型创建一个客户端，将配置此客户端支持客户端凭据授权，并简单的将它存储在内存中。
+
+```java
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+  RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+    .clientId("relive-client")
+    .clientSecret("{noop}relive-client")
+    .clientAuthenticationMethods(s -> {
+      s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+      s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+    })
+    .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+    .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-model")
+    .scope("message.read")
+    .clientSettings(ClientSettings.builder()
+                    .requireAuthorizationConsent(true)
+                    .requireProofKey(false)
+                    .build())
+    .tokenSettings(TokenSettings.builder()
+                   .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                   .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                   .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                   .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                   .reuseRefreshTokens(true)
+                   .build())
+    .build();
+
+  return new InMemoryRegisteredClientRepository(registeredClient);
+}
+```
+
+上述我们配置了一个OAuth2客户端，并将*authorizationGrantType*指定为**client_credentials**：
+
+- **clientId**: relive-client
+- **clientSecret**: relive-client
+- **redirectUri**: http://127.0.0.1:8070/login/oauth2/code/messaging-client-model
+- **scope**: message.read
+
+
+
+### 使用Spring Security构建OAuth2资源服务器
+
+OAuth2资源服务器配置与此文[JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)中资源服务搭建一致，您可以参考此文中OAuth2资源服务介绍，或可以在文末中获取本文源码地址进行查看。
+
+#### 配置
+
+OAuth2资源服务器提供了一个/*resource*/*article*受保护端点，并使用Spring Security保护此服务。
+
+```java
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  http.requestMatchers()
+    .antMatchers("/resource/article")
+    .and()
+    .authorizeRequests()
+    .mvcMatchers("/resource/article")
+    .access("hasAuthority('SCOPE_message.read')")
+    .and()
+    .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+  return http.build();
+}
+```
+
+请注意，OAuth2资源服务/*resource*/*article*端点要求拥有“message.read”权限才可以访问，Spring 自动在所需范围名称前添加“SCOPE_”，这样实际所需的范围是“message.read”而不是“SCOPE_message.read”。
+
+
+
+### 使用Spring Security构建OAuth2客户端
+
+在本节中，您将使用当前推荐的WebClient，WebClient 是 Spring 的 WebFlux 包的一部分。这是 Spring 的反应式、非阻塞 API，您可以在[Spring文档](https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html)中了解更多信息。
+
+
+
+在此客户端中，在`@Scheduled`此注解定义的CRON任务下，您将使用`WebClient`来发出请求。
+
+
+
+#### maven依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-client</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-webflux</artifactId>
+  <version>5.3.9</version>
+</dependency>
+<dependency>
+  <groupId>io.projectreactor.netty</groupId>
+  <artifactId>reactor-netty</artifactId>
+  <version>1.0.9</version>
+</dependency>
+```
+
+#### 配置
+
+授权我们将在application.yml中配置OAuth2授权信息，并指定OAuth2客户端服务端口号：
+
+```yaml
+server:
+  port: 8070
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          messaging-client-model:
+            provider: client-provider
+            client-id: relive-client
+            client-secret: relive-client
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_post
+            scope: message.read
+            client-name: messaging-client-model
+        provider:
+          client-provider:
+            token-uri: http://127.0.0.1:8080/oauth2/token
+```
+
+<br />
+
+接下来我们将创建一个*SecurityConfig*类用来配置Spring Security OAuth2客户端所需Bean：
+
+```java
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  http
+    .authorizeRequests(authorizeRequests ->
+                       authorizeRequests.anyRequest().permitAll()
+                      )
+    .oauth2Client(withDefaults());
+  return http.build();
+}
+
+@Bean
+WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+  ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+  return WebClient.builder()
+    .filter(oauth2Client)
+    .build();
+}
+
+@Bean
+OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+                                                      OAuth2AuthorizedClientService authorizedClientService) {
+
+  OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
+    .builder()
+    .clientCredentials()
+    .build();
+  AuthorizedClientServiceOAuth2AuthorizedClientManager authorizedClientManager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientService);
+  authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+
+  return authorizedClientManager;
+}
+```
+
+我们创建一个WebClient实例用于向资源服务器执行HTTP请求，并给WebClient添加了一个OAuth2授权过滤器。`AuthorizedClientServiceOAuth2AuthorizedClientManager`这是协调OAuth2客户端凭据授予请求的高级控制器类，这里我将指出`AuthorizedClientServiceOAuth2AuthorizedClientManager`是一个专门设计用于在 HttpServletRequest 的上下文之外使用的类。
+
+来自[Spring 文档](https://docs.spring.io/spring-security/site/docs/5.4.5/reference/html5/#oauth2Client-authorized-manager-provider)：
+
+> DefaultOAuth2AuthorizedClientManager 旨在用于 HttpServletRequest 的上下文中。在 HttpServletRequest 上下文之外操作时，请改用 AuthorizedClientServiceOAuth2AuthorizedClientManager。
+
+
+
+<br />
+
+接下来我们将创建使用`@Scheduled`注解定义的任务，并注入WebClient调用资源服务请求：
+
+```java
+@Service
+public class ArticleJob {
+
+  @Autowired
+  private WebClient webClient;
+
+  @Scheduled(cron = "0/2 * * * * ? ")
+  public void exchange() {
+    List list = this.webClient
+      .get()
+      .uri("http://127.0.0.1:8090/resource/article")
+      .attributes(clientRegistrationId("messaging-client-model"))
+      .retrieve()
+      .bodyToMono(List.class)
+      .block();
+    log.info("调用资源服务器执行结果：" + list);
+  }
+}
+
+```
+
+这个类中`exchange()`方法使用`@Scheduled`注解每2秒触发一次请求，在我们启动所有服务后，你应该看到这样的输出：
+
+```
+2022-07-09 19:55:22.281  INFO 20305 --- [   scheduling-1] com.relive.ArticleJob                    : 调用资源服务器执行结果：[article1, article2, article3]
+2022-07-09 19:55:24.023  INFO 20305 --- [   scheduling-1] com.relive.ArticleJob                    : 调用资源服务器执行结果：[article1, article2, article3]
+2022-07-09 19:55:26.015  INFO 20305 --- [   scheduling-1] com.relive.ArticleJob                    : 调用资源服务器执行结果：[article1, article2, article3]
+2022-07-09 19:55:28.009  INFO 20305 --- [   scheduling-1] com.relive.ArticleJob                    : 调用资源服务器执行结果：[article1, article2, article3]
+```
+
+
+
+### 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-client-model)获得。

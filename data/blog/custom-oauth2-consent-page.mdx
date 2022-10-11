@@ -1,0 +1,307 @@
+---
+title: 自定义OAuth2授权同意页面
+date: '2022-06-28 19:40:29'
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+## 自定义OAuth2授权同意页面
+
+[前文](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)我们已经简单的介绍了如何搭建授权服务器，下面将继续介绍如何自定义OAuth2授权同意页面。
+
+如果你已经无法容忍[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn) 默认丑陋的授权同意页面，那么你可以继续阅读本文，逐步创建一个令自己满意的授权同意页面。
+
+
+
+### OAuth2授权服务器实现
+
+从创建一个授权服务器开始。
+
+#### maven依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-oauth2-authorization-server</artifactId>
+  <version>0.3.1</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-thymeleaf</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+```
+
+#### 配置
+
+首先我们为授权服务器配置端口8080:
+
+```yaml
+server:
+  port: 8080
+```
+
+之后我们创建一个`AuthorizationServerConfig`配置类，在此类中我们将创建OAuth2授权服务器所需特定的Bean。首先指定我们授权同意页面/*oauth2*/*consent*  uri替换原有默认实现。
+
+```java
+@Configuration(proxyBeanMethods = false)
+public class AuthorizationServerConfig {
+    private static final String CUSTOM_CONSENT_PAGE_URI = "/oauth2/consent";
+
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        OAuth2AuthorizationServerConfigurer<HttpSecurity> authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer<>();
+        //定义授权同意页面
+        authorizationServerConfigurer.authorizationEndpoint(authorizationEndpoint ->
+                authorizationEndpoint.consentPage(CUSTOM_CONSENT_PAGE_URI));
+
+        RequestMatcher endpointsMatcher = authorizationServerConfigurer
+                .getEndpointsMatcher();
+
+        http.requestMatcher(endpointsMatcher)
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
+                .apply(authorizationServerConfigurer);
+        return http.exceptionHandling(exceptions -> exceptions.
+                authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+    }
+
+  //...
+}
+```
+
+接下来我们使用*RegisteredClient*构建器类型创建一个OAuth2客户端，并将它存储在缓存中。
+
+```java
+ @Bean
+    public RegisteredClientRepository registeredClientRepository() {
+        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("relive-client")
+                .clientSecret("{noop}relive-client")
+                .clientName("ReLive27")
+                .clientAuthenticationMethods(s -> {
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+                })
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+                .scope(OidcScopes.PROFILE)
+                .scope("message.read")
+                .scope("message.write")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)
+                        .requireProofKey(false)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                        .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                        .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                        .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                        .reuseRefreshTokens(true)
+                        .build())
+                .build();
+
+        return new InMemoryRegisteredClientRepository(registeredClient);
+    }
+```
+
+
+
+其余配置将不再赘述，可以参考之前[将JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)文章。
+
+<br />
+
+接下来将创建一个授权页面控制器，并将所需参数传递给*Model*：
+
+```java
+@Controller
+@RequiredArgsConstructor
+public class AuthorizationConsentController {
+    private final RegisteredClientRepository registeredClientRepository;
+
+    @GetMapping(value = "/oauth2/consent")
+    public String consent(Principal principal, Model model,
+                          @RequestParam(OAuth2ParameterNames.CLIENT_ID) String clientId,
+                          @RequestParam(OAuth2ParameterNames.SCOPE) String scope,
+                          @RequestParam(OAuth2ParameterNames.STATE) String state) {
+
+        Set<String> scopesToApprove = new LinkedHashSet<>();
+        RegisteredClient registeredClient = this.registeredClientRepository.findByClientId(clientId);
+        Set<String> scopes = registeredClient.getScopes();
+        for (String requestedScope : StringUtils.delimitedListToStringArray(scope, " ")) {
+            if (scopes.contains(requestedScope)) {
+                scopesToApprove.add(requestedScope);
+            }
+        }
+
+        model.addAttribute("clientId", clientId);
+        model.addAttribute("clientName", registeredClient.getClientName());
+        model.addAttribute("state", state);
+        model.addAttribute("scopes", withDescription(scopesToApprove));
+        model.addAttribute("principalName", principal.getName());
+        model.addAttribute("redirectUri", registeredClient.getRedirectUris().iterator().next());
+
+        return "consent";
+    }
+
+    private static Set<ScopeWithDescription> withDescription(Set<String> scopes) {
+        Set<ScopeWithDescription> scopeWithDescriptions = new LinkedHashSet<>();
+        for (String scope : scopes) {
+            scopeWithDescriptions.add(new ScopeWithDescription(scope));
+
+        }
+        return scopeWithDescriptions;
+    }
+
+    public static class ScopeWithDescription {
+        private static final String DEFAULT_DESCRIPTION = "我们无法提供有关此权限的信息";
+        private static final Map<String, String> scopeDescriptions = new HashMap<>();
+
+        static {
+            scopeDescriptions.put(
+                    "profile",
+                    "验证您的身份"
+            );
+            scopeDescriptions.put(
+                    "message.read",
+                    "了解您可以访问哪些权限"
+            );
+            scopeDescriptions.put(
+                    "message.write",
+                    "代表您行事"
+            );
+        }
+
+        public final String scope;
+        public final String description;
+
+        ScopeWithDescription(String scope) {
+            this.scope = scope;
+            this.description = scopeDescriptions.getOrDefault(scope, DEFAULT_DESCRIPTION);
+        }
+    }
+}
+
+```
+
+
+
+之后让我们定义html页面，这里使用[thymeleaf](https://www.thymeleaf.org/)模版引擎：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+          integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <title>Custom consent page - Consent required</title>
+    <style>
+        body {
+            background-color: #f6f8fa;
+        }
+
+        #submit-consent {
+            width: 45%;
+            float: right;
+            height: 40px;
+            font-size: 18px;
+            border-color: #cccccc;
+            margin-right: 3%;
+        }
+
+        #cancel-consent {
+            width: 45%;
+            height: 40px;
+            font-size: 18px;
+            color: black;
+            background-color: #cccccc;
+            border-color: #cccccc;
+            float: left;
+            margin-left: 3%;
+        }
+    </style>
+    <script>
+        function cancelConsent() {
+            document.consent_form.reset();
+            document.consent_form.submit();
+        }
+    </script>
+</head>
+<body>
+<div style="width: 500px;height: 600px;margin: 100px auto">
+    <h5 style="text-align: center"><b th:text="${clientName}"></b>希望获得以下许可：</h5>
+    <div style="width: 100%;height: 500px;border: #cccccc 1px solid;border-radius: 10px">
+        <form name="consent_form" method="post" action="/oauth2/authorize">
+            <input type="hidden" name="client_id" th:value="${clientId}">
+            <input type="hidden" name="state" th:value="${state}">
+
+            <div th:each="scope: ${scopes}" class="form-group form-check py-1" style="margin-left: 5%">
+                <input class="form-check-input"
+                       type="checkbox"
+                       name="scope"
+                       th:value="${scope.scope}"
+                       th:id="${scope.scope}"
+                       checked>
+                <label class="form-check-label font-weight-bold" th:for="${scope.scope}"
+                       th:text="${scope.scope}=='profile'?(${scope.description}+'('+${principalName}+')'):${scope.description}"></label>
+            </div>
+
+            <hr style="width: 90%">
+            <p style="margin-left: 5%"><b th:text="${clientName}"></b>尚未安装在您有权访问的任何账户上。</p>
+            <hr style="width: 90%">
+            <div class="form-group pt-3" style="width: 100%;height: 80px;">
+                <button class="btn btn-primary btn-lg" type="submit" id="submit-consent">
+                    授权同意
+                </button>
+                <button class="btn btn-primary btn-lg" type="button" id="cancel-consent" onclick="cancelConsent();">
+                    取消
+                </button>
+            </div>
+            <div style="margin-top: 5px;width: 100%;height: 50px">
+                <p style="text-align: center;font-size: 14px">授权将重定向到</p>
+                <p style="text-align: center;font-size: 14px"><b th:text="${redirectUri}"></b></p>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+```
+
+
+
+#### 访问授权页面
+
+启动服务后，我们将发起一个授权请求，[http://localhost:8080/oauth2/authorize?response_type=code&client_id=relive-client&scope=message.write%20message.read%20profile&state=some-state&redirect_uri=http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code](http://localhost:8080/oauth2/authorize?response_type=code&client_id=relive-client&scope=message.write%20message.read%20profile&state=some-state&redirect_uri=http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code) ，在认证成功后，我们可以看到以下我们定义的授权同意页面：
+
+![](/static/images/blogs/custom-page.png)
+
+
+
+### 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-custom-consent-authorizationserver)获得。

@@ -1,0 +1,144 @@
+---
+title: '使用Java连接SSH'
+date: '2022-05-15 17:24:47'
+tags: ['ssh', 'java']
+draft: false
+images: ['/static/images/blogs/ssh.jpeg']
+authors: ['default']
+---
+
+
+## 简介
+
+[SSH](https://baike.baidu.com/item/ssh/10407?fr=aladdin) 为建立在应用层基础上的安全协议。SSH 是较可靠，专为远程登录会话和其他网络服务提供安全性的协议。
+
+## Jsch
+
+JSch 是 [SSH2](http://ietf.org/html.charters/secsh-charter.html)的纯 Java 实现。JSch 允许你连接到一个 sshd 服务器并使用端口转发、X11 转发、文件传输等，你可以将它的功能集成到你自己的 Java 程序中。
+
+首先，让我们将[JSch Maven 依赖](https://mvnrepository.com/artifact/com.jcraft/jsch)添加到我们的*pom.xml*文件中：
+
+```xml
+<dependency>
+    <groupId>com.jcraft</groupId>
+    <artifactId>jsch</artifactId>
+    <version>0.1.55</version>
+</dependency>
+```
+
+### 执行
+
+要使用Jsch连接ssh，需要提供**用户名**，**密码**，**主机**，**端口**，以下是简单代码实例：
+
+```java
+ public static void execCommand(String username, String password, String host, Integer port, String command) throws JSchException, InterruptedException {
+        Session session = null;
+        ChannelExec channel = null;
+
+        try {
+            session = new JSch().getSession(username, host, port);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand(command);
+            ByteArrayOutputStream responseStream = new ByteArrayOutputStream();
+            channel.setOutputStream(responseStream);
+            ByteArrayOutputStream errorResponseStream = new ByteArrayOutputStream();
+            channel.setErrStream(errorResponseStream);
+            channel.connect();
+
+            while (channel.isConnected()) {
+                Thread.sleep(100);
+            }
+
+            String responseString = new String(responseStream.toByteArray(), StandardCharsets.UTF_8);
+            if (!responseString.isEmpty()) {
+                log.info(responseString);
+            }
+            String errorResponseString = new String(errorResponseStream.toByteArray(), StandardCharsets.UTF_8);
+            if (!errorResponseString.isEmpty()) {
+                log.warn(errorResponseString);
+            }
+        } finally {
+            if (session != null) {
+                session.disconnect();
+            }
+            if (channel != null) {
+                channel.disconnect();
+            }
+        }
+    }
+```
+
+上述代码中我们首先建立SSH会话，通过会话建立执行通道，执行我们提供的shell命令，并将响应信息和错误响应信息输出到控制台。
+
+**如何使用 JSch 提供的不同配置参数**：
+
+- *StrictHostKeyChecking* - 它指示应用程序是否将检查是否可以在已知主机中找到主机公钥。此外，可用的参数值是*ask*、*yes*和*no*，其中*ask*是默认值。如果我们将此属性设置为*yes*，JSch 将永远不会自动将主机密钥添加到*known_hosts*文件，并且它将拒绝连接到主机密钥已更改的主机。这会强制用户手动添加所有新主机。如果我们将其设置为 *no*，JSch 会自动将新的主机密钥添加到已知主机列表中
+- *compression.s2c* – 指定是否对从服务器到客户端应用程序的数据流使用压缩。可用值为*zlib*和*none*，其中第二个是默认值
+- *compression.c2s* – 指定是否对客户端-服务器方向的数据流使用压缩。可用值为*zlib*和*none*，其中第二个是默认值
+
+## Apache MINA SSHD
+
+[Apache SSHD](https://mina.apache.org/sshd-project/) 是一个 100% 纯 Java 库，支持客户端和服务器端的 SSH 协议。该库基于[Apache MINA](http://mina.apache.org/)，这是一个可扩展的高性能异步 IO 库。
+
+首先，让我们将[sshd Maven 依赖](https://mvnrepository.com/artifact/org.apache.sshd/sshd-core)添加到我们的*pom.xml*文件中：
+
+```xml
+<dependency>
+    <groupId>org.apache.sshd</groupId>
+    <artifactId>sshd-core</artifactId>
+    <version>2.8.0</version>
+</dependency>
+```
+
+### 执行
+
+同样，建立ssh连接需要提供**用户名**，**密码**，**主机地址**，**端口**，除此之外，sshd可以设置**连接超时时间**，以下提供简单的代码示例：
+
+```java
+ public static void execCommand(String username, String password, String host, Integer port, Integer defaultTimeoutSeconds, String command) throws IOException {
+        SshClient client = SshClient.setUpDefaultClient();
+        client.start();
+        try (ClientSession session = client.connect(username, host, port)
+                .verify(defaultTimeoutSeconds, TimeUnit.SECONDS)
+                .getSession()) {
+            session.addPasswordIdentity(password);
+            session.auth().verify(defaultTimeoutSeconds, TimeUnit.SECONDS);
+            try (ByteArrayOutputStream responseStream = new ByteArrayOutputStream();
+                 ByteArrayOutputStream errorResponseStream = new ByteArrayOutputStream();
+                 ClientChannel channel = session.createChannel(Channel.CHANNEL_SHELL)) {
+                channel.setOut(responseStream);
+                channel.setErr(errorResponseStream);
+                try {
+                    channel.open().verify(defaultTimeoutSeconds, TimeUnit.SECONDS);
+                    try (OutputStream pipedIn = channel.getInvertedIn()) {
+                        pipedIn.write(command.getBytes());
+                        pipedIn.flush();
+                    }
+                    channel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(defaultTimeoutSeconds));
+                    String errorString = new String(errorResponseStream.toByteArray());
+                    if (!errorString.isEmpty()) {
+                        log.warn(errorString);
+                    }
+                    String responseString = new String(responseStream.toByteArray());
+                    if (!responseString.isEmpty()) {
+                        log.info(responseString);
+                    }
+                } finally {
+                    channel.close(false);
+                }
+            }
+        } finally {
+            client.stop();
+        }
+    }
+```
+
+
+
+## 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/Java/tree/master/security/src/main/java/com/relive/ssh)获得。

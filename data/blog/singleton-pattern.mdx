@@ -1,0 +1,128 @@
+---
+title: 设计模式-单例模式
+date: 2022-05-11 20:26:19
+tags: ['java']
+draft: false
+authors: ['default']
+images: ['/static/images/blogs/design_pattern.png']
+---
+
+## 单例模式
+
+单例模式是设计模式中比较简单的模式，也是很常用的模式，其定义如下：
+
+**确保某一个类只有一个实例，而且自行实例化并向整个系统提供这个实例**。
+
+
+
+通用类图如下：
+
+![](/static/images/blogs/singleton-pattern.jpeg)
+
+
+
+通过私有化构造函数确保在一个应用中只有一个实例，并提供静态方法发布对象。
+
+单例模式通用代码（也被称为饿汉式）：
+
+```java
+public class Singleton {
+  private static final Singleton singleton= new Singleton();
+  //限制多个对象
+  private Singleton (){}
+
+  //通过该方法获得实例对象
+  public static Singleton getSingleton() {
+    return singleton;
+  }
+
+  //在类中其他方法，尽量是static
+  public static void doSomething(){
+    ...
+  }
+}
+
+```
+
+
+
+### 单例模式的优点
+
+- 减少内存开支，特别是一个对象频繁的创建和销毁时。
+- 减少系统性能开销，当一个对象的产生需要比较多的资源时，可以通过启动时产生一个单例对象。
+- 单例模式可以避免对资产的多重占用。
+- 单例模式可以在系统设置全局的访问点，优化和共享资源访问。
+
+
+
+### 单例模式的缺点
+
+- 单例模式对测试不利，在并行开发中，如果单例模式没有完成，是不能进行测试的，因为没有接口也不能mock的方式虚拟一个对象
+- 单例模式与单一职责原则有冲突，一个类应该只实现一个逻辑，单例模式把“要单例”和业务逻辑合在一个类中
+
+
+
+### 单例模式使用场景
+
+系统中要求一个类只有一个对象，当存在多个对象时会产生错误影响，可以使用单例模式。
+
+- 要求生成唯一序列号的环境
+- 在项目中需要一个共享访问点和共享数据
+- 创建一个对象需要消耗很多资源。
+- 需要定义大量的静态常量和静态方法（如工具类）
+
+
+
+### 单例模式的注意事项
+
+在高并发情况下，单例模式存在线程同步问题，如下面的一种单例模式实现方式（也称为懒汉式）：
+
+```java
+public class Singleton {
+  private static Singleton singleton = null;
+
+  //限制产生多个对象
+  private Singleton(){}
+
+  public static Singleton getSingleton() {
+    if(singleton == null){
+      singleton = new Singleton();
+    }
+    return singleton;
+  }
+}
+```
+
+在并发量增加时可能会出现多个实例，如一个线程A执行到singleton = new Singleton()，但是还没有获得对象，第二个线程B也在执行，执行到singleton == null判断，判断条件为真，于是运行下去也创建了一个对象。
+
+
+
+解决线程不安全问题方法有很多，一使用饿汉式的实现方式，静态变量在类加载时初始化，类加载过程是线程安全的，所以饿汉式没有线程安全问题；二是使用Java的锁机制，以下代码示例单例模式（懒汉式）的双重检锁机制：
+
+```java
+public class Singleton {
+  private static volatile Singleton singleton = null;
+
+  //限制产生多个对象
+  private Singleton(){}
+
+    public static Singleton getSingleton() {
+        if (singleton == null) {
+            synchronized (Singleton.class) {
+                if (singleton == null) {
+                    singleton = new Singleton();
+                }
+            }
+        }
+      return singleton;
+    }
+}
+```
+
+总之单例模式比较简单而且应用非常广泛，在Spring框架中每个Bean默认就是单例的。
+
+
+
+### 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/Java/tree/master/designPatterns/src/main/java/com/relive/singleton)获得。

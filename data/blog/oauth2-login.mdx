@@ -1,0 +1,669 @@
+---
+title: Spring Security OAuth2登录
+date: 2022-07-25 20:01:01
+tags: ['OAuth2', 'SpringSecurity']
+draft: false
+authors: ['default']
+---
+
+## Spring Security OAuth2登录
+
+
+
+### 概述
+
+**OAuth 2.0 不是身份认证协议**。
+
+
+
+什么是身份认证？**身份认证**是解决“你是谁？”的问题。身份认证会告诉应用当前用户是谁以及是否在使用此应用。实际中可能还会告诉你用户的名称，邮箱，手机号等。
+
+如果对 OAuth 2.0 进行扩展，使得授权服务器和受保护资源发出的信息能够传达与用户以及他们的身份认证上下文有关的信息，我们就可以为客户端提供用于用户安全登录的所有信息。这种基于OAuth 2.0授权协议而构建的身份认证方式主要优点：
+
+- 用户在授权服务器上执行身份认证， 最终用户的原始凭据不会通过 OAuth 2.0 协议传送到客户端应用。
+- 允许用户在运行时执行同意决策。
+- 用户还可以将其他受保护 API 与他的身份信息的访问权限一起授权出去。通过一个调用，应用就可以知道用户是否已登录，如何称呼用户，用户的手机号，邮箱等。
+
+
+
+
+本文我们将通过OAuth 2.0 授权码模式安全的传递授权服务用户信息，并登录到客户端应用。
+
+
+
+本文您将学到：
+
+- 搭建基本的授权服务和客户端服务
+
+- 自定义授权服务器访问令牌，添加角色信息
+- 自定义授权服务器用户信息端点
+- 客户端服务使用`GrantedAuthoritiesMapper`做权限映射
+- 客户端服务自定义OAuth2UserService实现解析多层Json数据
+
+
+
+
+
+### OAuth2授权服务器
+
+本节我们将使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server)搭建一个授权服务器。除此之外我们还将会自定义access_token和自定义用户信息端点。
+
+#### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-oauth2-authorization-server</artifactId>
+  <version>0.3.1</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+```
+
+
+
+#### 配置
+
+首先通过application.yml配置服务端口8080:
+
+```yaml
+server:
+  port: 8080
+```
+
+<br />
+
+接下来我们将创建`OAuth2ServerConfig`配置类，定义OAuth2 授权服务所需特定Bean。首先我们注册一个OAuth2客户端:
+
+```java
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+  RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+    .clientId("relive-client")
+    .clientSecret("{noop}relive-client")
+    .clientAuthenticationMethods(s -> {
+      s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+      s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+    })
+    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+    .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+    .scope(OidcScopes.PROFILE)
+    .clientSettings(ClientSettings.builder()
+                    .requireAuthorizationConsent(true)
+                    .requireProofKey(false)
+                    .build())
+    .tokenSettings(TokenSettings.builder()
+                   .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                   .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)/
+                   .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                   .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                   .reuseRefreshTokens(true)
+                   .build())
+    .build();
+  return new InMemoryRegisteredClientRepository(registeredClient);
+}
+```
+
+以上将OAuth2客户端存储在内存中，如果您需要使用数据库持久化，请参考文章[将JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)。指定OAuth2客户端信息如下：
+
+- **clientId**: relive-client
+- **clientSecret**: relive-client
+- **redirectUri**: http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code
+- **scope**: profile
+
+
+
+接下来让我们配置OAuth2授权服务其他默认配置，并对未认证的授权请求重定向到登录页面：
+
+```java
+@Bean
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+  OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
+  return http
+    .exceptionHandling(exceptions -> exceptions.
+                       authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
+    .build();
+}
+```
+
+<br />
+
+授权服务器token令牌格式使用[JWT RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519)，所以我们需要用于令牌的签名密钥，让我们生成一个RSA密钥：
+
+```java
+@Bean
+public JWKSource<SecurityContext> jwkSource() {
+  RSAKey rsaKey = Jwks.generateRsa();
+  JWKSet jwkSet = new JWKSet(rsaKey);
+  return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+}
+
+static class Jwks {
+
+  private Jwks() {
+  }
+
+  public static RSAKey generateRsa() {
+    KeyPair keyPair = KeyGeneratorUtils.generateRsaKey();
+    RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+    RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+    return new RSAKey.Builder(publicKey)
+      .privateKey(privateKey)
+      .keyID(UUID.randomUUID().toString())
+      .build();
+  }
+}
+
+static class KeyGeneratorUtils {
+
+  private KeyGeneratorUtils() {
+  }
+
+  static KeyPair generateRsaKey() {
+    KeyPair keyPair;
+    try {
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+      keyPairGenerator.initialize(2048);
+      keyPair = keyPairGenerator.generateKeyPair();
+    } catch (Exception ex) {
+      throw new IllegalStateException(ex);
+    }
+    return keyPair;
+  }
+}
+```
+
+
+
+<br />
+
+接下来我们将自定义access_token 访问令牌，并在令牌中添加角色信息：
+
+```java
+@Configuration(proxyBeanMethods = false)
+public class AccessTokenCustomizerConfig {
+
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
+        return (context) -> {
+            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+                context.getClaims().claims(claim -> {
+                    claim.put("role", context.getPrincipal().getAuthorities().stream()
+                            .map(GrantedAuthority::getAuthority).collect(Collectors.toSet()));
+                });
+            }
+        };
+    }
+}
+```
+
+可以看到Spring Security为我们提供了*OAuth2TokenCustomizer*用于扩展令牌信息，我们从*OAuth2TokenContext*获取到当前用户信息，并从中提取Authorities权限信息添加到JWT的claim。
+
+
+
+<br />
+
+下面我们将创建Spring Security配置类，配置授权服务基本的认证能力。
+
+```java
+@Configuration(proxyBeanMethods = false)
+public class DefaultSecurityConfig {
+
+    @Bean
+    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers("/userInfo")
+                .access("hasAnyAuthority('SCOPE_profile')")
+                .mvcMatchers("/userInfo")
+                .access("hasAuthority('SCOPE_profile')")
+                .anyRequest().authenticated()
+                .and()
+                .formLogin(Customizer.withDefaults())
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+        return http.build();
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+        return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
+    }
+
+    @Bean
+    public UserDetailsService users() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("password")
+                .roles("ADMIN")
+                .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+}
+```
+
+在上述配置类中，我们做了以下几件事。1.启用Form认证方式；2.配置登录用户名密码；3.使用`oauth2ResourceServer()`配置JWT验证，并声明`JwtDecoder`；4.保护/userInfo端点需要profile权限进行访问。
+
+
+
+<br />
+
+此时我们还需要创建Controller类，用于提供给OAuth2客户端服务获取用户信息：
+
+```java
+@RestController
+public class UserInfoController {
+
+    @PostMapping("/userInfo")
+    public Map<String, Object> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
+        return Collections.singletonMap("data", jwt.getClaims());
+    }
+}
+```
+
+我们将用户信息使用以下JSON格式返回：
+
+```json
+{
+  "data":{
+    "sub":"admin"
+    ...
+  }
+}
+```
+
+
+
+### OAuth2客户端服务
+
+本节将使用Spring Security配置OAuth2客户端登录；并且我们将使用`GrantedAuthoritiesMapper`映射权限信息；还将通过自定义实现`OAuth2UserService`替换原有`DefaultOAuth2UserService`，用于解析多层JSON 用户信息数据。
+
+
+
+#### maven
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+  <version>2.6.7</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-client</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-thymeleaf</artifactId>
+  <version>2.6.7</version>
+</dependency>
+
+```
+
+
+
+#### 配置
+
+首先我们指定客户端服务端口号8070,并配置OAuth2客户端相关信息：
+
+```yaml
+server:
+  port: 8070
+  servlet:
+    session:
+      cookie:
+        name: CLIENT-SESSION
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          messaging-client-authorization-code:
+            provider: client-provider
+            client-id: relive-client
+            client-secret: relive-client
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: profile
+            client-name: messaging-client-authorization-code
+        provider:
+          client-provider:
+            authorization-uri: http://127.0.0.1:8080/oauth2/authorize
+            token-uri: http://127.0.0.1:8080/oauth2/token
+            user-info-uri: http://127.0.0.1:8080/userInfo
+            user-name-attribute: data.sub
+            user-info-authentication-method: form
+
+```
+
+<br />
+
+接下来配置Spring Security相关Bean，首先我们先启用Form表单认证和OAuth2登录能力：
+
+```java
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  http.authorizeHttpRequests()
+    .anyRequest()
+    .authenticated()
+    .and()
+    .formLogin(from -> {
+      from.defaultSuccessUrl("/home");
+    })
+    .oauth2Login(Customizer.withDefaults())
+    .csrf().disable();
+  return http.build();
+}
+```
+
+这里我们指定认证成功后重定向到/home路径下。
+
+<br />
+
+下面我们使用`GrantedAuthoritiesMapper`映射用户权限：
+
+```java
+@Bean
+GrantedAuthoritiesMapper userAuthoritiesMapper() {
+  //角色映射关系，授权服务器ADMIN角色对应客户端OPERATION角色
+  Map<String, String> roleMapping = new HashMap<>();
+  roleMapping.put("ROLE_ADMIN", "ROLE_OPERATION");
+  return (authorities) -> {
+    Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+    authorities.forEach(authority -> {
+      if (OAuth2UserAuthority.class.isInstance(authority)) {
+        OAuth2UserAuthority oauth2UserAuthority = (OAuth2UserAuthority) authority;
+        Map<String, Object> userAttributes = oauth2UserAuthority.getAttributes();
+        List<String> role = (List) userAttributes.get("role");
+        role.stream().map(roleMapping::get)
+          .filter(StringUtils::hasText)
+          .map(SimpleGrantedAuthority::new)
+          .forEach(mappedAuthorities::add);
+      }
+    });
+    return mappedAuthorities;
+  };
+}
+```
+
+上述将OAuth2授权服务**ADMIN**角色映射为客户端角色**OPERATION**。当然你同样可以扩展为数据库操作，那么需要你维护授权服务角色与客户端服务角色映射表，这里将不展开。
+
+`GrantedAuthoritiesMapper`作为权限映射器在OAuth2登录，CAS登录，SAML和LDAP多方使用。
+
+`GrantedAuthoritiesMapper`在*OAuth2LoginAuthenticationProvider*中源码如下：
+
+```java
+@Override
+public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+    OAuth2LoginAuthenticationToken loginAuthenticationToken = (OAuth2LoginAuthenticationToken) authentication;
+    //...省略部分源码
+
+    /* map authorities */
+    Collection<? extends GrantedAuthority> mappedAuthorities = this.authoritiesMapper
+      .mapAuthorities(oauth2User.getAuthorities());
+    /* map authorities */
+
+    OAuth2LoginAuthenticationToken authenticationResult = new OAuth2LoginAuthenticationToken(
+      loginAuthenticationToken.getClientRegistration(), loginAuthenticationToken.getAuthorizationExchange(),
+      oauth2User, mappedAuthorities, accessToken, authorizationCodeAuthenticationToken.getRefreshToken());
+    authenticationResult.setDetails(loginAuthenticationToken.getDetails());
+    return authenticationResult;
+}
+```
+
+所以当我们自定义实现`GrantedAuthoritiesMapper`后，OAuth2 登录成功后将映射后的权限信息存储在认证信息Authentication的子类OAuth2LoginAuthenticationToken中，在后续流程中需要时获取。
+
+<br />
+
+
+
+接下来将实现OAuth2UserService自定义DefaultJsonOAuth2UserService类。当然Spring Security提供了DefaultOAuth2UserService，那么为什么不使用它呢？原因很简单，首先让我们回顾授权服务器返回用户信息格式：
+
+```json
+{
+  "data":{
+    "sub":"admin"
+    ...
+  }
+}
+```
+
+不错，用户信息嵌套data字段中，而DefaultOAuth2UserService处理用户信息响应时并没有处理这个格式，以下是DefaultOAuth2UserService源码：
+
+```java
+public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        Assert.notNull(userRequest, "userRequest cannot be null");
+        if (!StringUtils.hasText(userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUri())) {
+            OAuth2Error oauth2Error = new OAuth2Error("missing_user_info_uri", "Missing required UserInfo Uri in UserInfoEndpoint for Client Registration: " + userRequest.getClientRegistration().getRegistrationId(), (String)null);
+            throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+        } else {
+            String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+            if (!StringUtils.hasText(userNameAttributeName)) {
+                OAuth2Error oauth2Error = new OAuth2Error("missing_user_name_attribute", "Missing required \"user name\" attribute name in UserInfoEndpoint for Client Registration: " + userRequest.getClientRegistration().getRegistrationId(), (String)null);
+                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+            } else {
+                RequestEntity<?> request = (RequestEntity)this.requestEntityConverter.convert(userRequest);
+               /* 获取用户信息 */
+              ResponseEntity<Map<String, Object>> response = this.getResponse(userRequest, request);
+                //在这里直接获取响应体信息，默认此userAttributes包含相关用户信息，并没有解析多层JSON
+                Map<String, Object> userAttributes = (Map)response.getBody();
+               /* 获取用户信息 */
+                Set<GrantedAuthority> authorities = new LinkedHashSet();
+                authorities.add(new OAuth2UserAuthority(userAttributes));
+                OAuth2AccessToken token = userRequest.getAccessToken();
+                Iterator var8 = token.getScopes().iterator();
+
+                while(var8.hasNext()) {
+                    String authority = (String)var8.next();
+                    authorities.add(new SimpleGrantedAuthority("SCOPE_" + authority));
+                }
+
+                return new DefaultOAuth2User(authorities, userAttributes, userNameAttributeName);
+            }
+        }
+    }
+```
+
+而最后创建DefaultOAuth2User时，你可能会收到以下错误信息
+
+```
+Missing attribute 'sub' in attributes
+```
+
+通过上面源码，Spring Security 所希望返回的用户信息格式：
+
+```json
+{
+  "sub":"admin",
+  ...
+}
+```
+
+但是实际中，我们开发时通常会统一返回响应格式。例如：
+
+```json
+{
+  "code":200,
+  "message":"success",
+  "data":{
+    "sub":"admin",
+    ...
+  }
+}
+```
+
+<br />
+
+下面我们是我们通过以userNameAttributeName以 **.** 为分割符，提取用户信息实现，以下只展示部分代码，其余代码和*DefaultOAuth2UserService*y源码相同。
+
+
+
+首先我们新建工具类JsonHelper用于解析Json
+
+```java
+@Slf4j
+public class JsonHelper {
+    private static final JsonHelper.MapTypeReference MAP_TYPE = new JsonHelper.MapTypeReference();
+
+    private static ObjectMapper mapper;
+
+    private JsonHelper() {
+    }
+
+    static {
+        mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+    public static JsonNode getFirstNode(final JsonNode node, final String path) {
+        JsonNode resultNode = null;
+        if (path != null) {
+            resultNode = getElement(node, path);
+        }
+        return resultNode;
+    }
+
+    public static JsonNode getElement(final JsonNode json, final String name) {
+        if (json != null && name != null) {
+            JsonNode node = json;
+            for (String nodeName : name.split("\\.")) {
+                if (node != null) {
+                    if (nodeName.matches("\\d+")) {
+                        node = node.get(Integer.parseInt(nodeName));
+                    } else {
+                        node = node.get(nodeName);
+                    }
+                }
+            }
+            if (node != null) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+
+    public static Map<String, Object> parseMap(String json) {
+        try {
+            return mapper.readValue(json, MAP_TYPE);
+        } catch (JsonProcessingException e) {
+            log.error("Cannot convert json to map");
+        }
+        return null;
+    }
+
+    private static class MapTypeReference extends TypeReference<Map<String, Object>> {
+        private MapTypeReference() {
+        }
+    }
+}
+```
+
+
+
+新建DefaultJsonOAuth2UserService实现OAuth2UserService，添加多层JSON提取用户信息逻辑：
+
+
+```java
+public class DefaultJsonOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+
+    //...
+
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        //...省略部分代码
+        RequestEntity<?> request = this.requestEntityConverter.convert(userRequest);
+        ResponseEntity<JsonNode> response = getResponse(userRequest, request);
+        JsonNode responseBody = response.getBody();
+
+        //多层JSON提取用户信息属性
+        Map<String, Object> userAttributes = new HashMap<>();
+        if (userNameAttributeName.contains(".")) {
+          String firstNodePath = userNameAttributeName.substring(0, userNameAttributeName.lastIndexOf("."));
+          userAttributes = this.extractUserAttribute(responseBody, firstNodePath);
+          userNameAttributeName = userNameAttributeName.substring(firstNodePath.length() + 1);
+        } else {
+          userAttributes = JsonHelper.parseMap(responseBody.toString());
+        }
+
+        //...省略部分代码
+    }
+}
+```
+
+如您需要参考详细代码，请查阅文末源码链接获取。
+
+
+
+<br />
+
+最后我们创建Controller类，使用[thymeleaf](https://www.thymeleaf.org/)引擎构建首页信息，不同权限信息看到首页列表结果不同：
+
+```
+@Controller
+public class HomeController {
+
+    private static Map<String, List<String>> articles = new HashMap<>();
+
+    static {
+        articles.put("ROLE_OPERATION", Arrays.asList("Java"));
+        articles.put("ROLE_SYSTEM", Arrays.asList("Java", "Python", "C++"));
+    }
+
+    @GetMapping("/home")
+    public String home(Authentication authentication, Model model) {
+        String authority = authentication.getAuthorities().iterator().next().getAuthority();
+        model.addAttribute("articles", articles.get(authority));
+        return "home";
+    }
+}
+```
+
+
+
+### 测试
+
+我们启动服务后，访问http://127.0.0.1:8070/login， 首先使用用户名密码登录，您将会看到：
+
+![](/static/images/blogs/form-login-home.png)
+
+
+
+之后我们退出登录使，用OAuth2 登录，您将会看到不同信息：
+
+![](/static/images/blogs/oauth2-login-home.png)
+
+### 结论
+
+我们使用OAuth2.0 授权协议上构建身份认证证明是可行的。但是我们不能忽略在这之间的陷阱。
+
+1. 令牌本身并不传递有关身份认证事件的信息。令牌可能是直接颁发给客户端的，使用的是无须用户交互的 OAuth 2.0 客户端凭据模式。
+2. 客户端都无法从访问令牌中得到关于用户及其登录状态的信息。OAuth 2.0 访问令牌的目标受众是资源服务器。（在本文中我们使用JWT访问令牌，通过自定义访问令牌信息使客户端服务获取用户权限等信息，但是OAuth2.0 协议中并没有定义访问令牌格式，我们仅是使用了JWT的特性来做到这一点。）
+3. 客户端可以出示访问令牌给资源服务获取用户信息，所以很容易就认为只要拥有一个有效的访问令牌，就能证明用户已登录，这一思路仅在某些情况下是正确的，即用户在授权服务器上完成身份认证，刚生成访问令牌的时候。（因为访问令牌有效期可能远长与身份认证会话有效期）
+
+4. 基于OAuth2.0的用户信息API的最大问题是，不同身份提供者实现用户信息API必然不同。用户的唯一标识可能是“user_id"，也可能是“sub”。
+
+
+
+所以我们需要统一的OAuth2.0为基础的标准身份认证协议。OpenID Connect 是一个开放标准，它定义了一种使用 OAuth 2.0 执行用户身份认证的互通方式。这将在后续文章中介绍它。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-login)获得。

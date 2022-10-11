@@ -1,0 +1,123 @@
+---
+title: SpringBoot启动完成前后执行某个方法
+date: 2022-05-10 21:10:10
+tags: ['SpringBoot']
+draft: false
+authors: ['default']
+images: ['/static/images/blogs/springboot.jpeg']
+---
+
+在项目启动完成之前
+
+实现`ApplicationListener<ContextRefreshedEvent>`，ContextRefreshedEvent为启动事件。
+
+```java
+@Component
+public class ApplicationListenerDemo implements ApplicationListener<ContextRefreshedEvent> {
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
+        System.out.println("applicationListener before server success");
+    }
+}
+```
+
+#### 在项目启动完成之后
+
+##### 方式一 ：实现ApplicationRunner接口
+
+```java
+@Component
+public class ApplicationRunnerDemo implements ApplicationRunner {
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        System.out.println("run after server success");
+    }
+}
+```
+
+
+
+##### 方式二：实现CommandLineRunner接口
+
+```java
+public class CommandLineRunnerDemo implements CommandLineRunner {
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println("commandLineRunner after server success");
+    }
+}
+```
+
+
+
+#### 原理
+
+启动类的run方法调用了callRunners方法
+
+```java
+public ConfigurableApplicationContext run(String... args) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        ConfigurableApplicationContext context = null;
+        Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList();
+        this.configureHeadlessProperty();
+        SpringApplicationRunListeners listeners = this.getRunListeners(args);
+        listeners.starting();
+
+        Collection exceptionReporters;
+        try {
+            ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+            ConfigurableEnvironment environment = this.prepareEnvironment(listeners, applicationArguments);
+            this.configureIgnoreBeanInfo(environment);
+            Banner printedBanner = this.printBanner(environment);
+            context = this.createApplicationContext();
+            exceptionReporters = this.getSpringFactoriesInstances(SpringBootExceptionReporter.class, new Class[]{ConfigurableApplicationContext.class}, context);
+            this.prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+            this.refreshContext(context);
+            this.afterRefresh(context, applicationArguments);
+            stopWatch.stop();
+            if (this.logStartupInfo) {
+                (new StartupInfoLogger(this.mainApplicationClass)).logStarted(this.getApplicationLog(), stopWatch);
+            }
+
+            listeners.started(context);
+          	//执行callRunners方法
+            this.callRunners(context, applicationArguments);
+        } catch (Throwable var10) {
+            this.handleRunFailure(context, var10, exceptionReporters, listeners);
+            throw new IllegalStateException(var10);
+        }
+
+        try {
+            listeners.running(context);
+            return context;
+        } catch (Throwable var9) {
+            this.handleRunFailure(context, var9, exceptionReporters, (SpringApplicationRunListeners)null);
+            throw new IllegalStateException(var9);
+        }
+    }
+```
+
+callRunners方法会调用容器里所有实现了ApplicationRunner、CommandLineRunner接口的方法
+
+```java
+private void callRunners(ApplicationContext context, ApplicationArguments args) {
+        List<Object> runners = new ArrayList();
+        runners.addAll(context.getBeansOfType(ApplicationRunner.class).values());
+        runners.addAll(context.getBeansOfType(CommandLineRunner.class).values());
+        AnnotationAwareOrderComparator.sort(runners);
+        Iterator var4 = (new LinkedHashSet(runners)).iterator();
+
+        while(var4.hasNext()) {
+            Object runner = var4.next();
+            if (runner instanceof ApplicationRunner) {
+                this.callRunner((ApplicationRunner)runner, args);
+            }
+
+            if (runner instanceof CommandLineRunner) {
+                this.callRunner((CommandLineRunner)runner, args);
+            }
+        }
+
+    }
+```

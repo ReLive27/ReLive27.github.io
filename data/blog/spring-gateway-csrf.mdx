@@ -1,0 +1,63 @@
+---
+title: SpringGateway使用SpringSecurity防止CSRF攻击
+date: 2022-06-22 18:49:48
+tags: ['SpringCloud']
+draft: false
+authors: ['default']
+---
+
+## SpringGateway使用SpringSecurity防止CSRF攻击
+
+### 配置CSRF保护
+
+```
+@Bean
+public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+	http
+		.csrf(csrf -> csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse()))
+	return http.build();
+}
+```
+
+以上通过Cookie持久化`XSRF-TOKEN`值，jS读取cookie中的值发起请求时需携带`X-XSRF-TOKEN`
+请求头，默认情况GET，HEAD，TRACE，OPTIONS请求方式是放行的，具体实现在`DefaultRequireCsrfProtectionMatcher`
+类。如果需要特殊定制，可以自定义实现类实现`ServerWebExchangeMatcher`,并替换默认`DefaultRequireCsrfProtectionMatcher`:
+
+```
+  @Bean
+    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+        http
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
+                        .requireCsrfProtectionMatcher(new CustomServerWebExchangeMatcher());
+        return http.build();
+    }
+```
+
+### CookieServerCsrfTokenRepository does not add cookie
+
+在我们按照上述配置分别测试GET请求和POST请求时，发现GET请求响应cookie中并没有`XSRF-TOKEN`，原因在响应式编程中`CsrfToken`
+并没有被订阅。具体问题解析在[Spring Security issues中找到答案](https://github.com/spring-projects/spring-security/issues/5766)；
+最后也提供了解决方式：
+
+```
+@Slf4j
+@Component
+public class CsrfHelperFilter implements WebFilter {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String key = CsrfToken.class.getName();
+        Mono<CsrfToken> csrfToken = null != exchange.getAttribute(key) ? exchange.getAttribute(key) : Mono.empty();
+        return csrfToken.doOnSuccess(token -> {
+            ResponseCookie cookie = ResponseCookie.from("XSRF-TOKEN", token.getToken()).maxAge(Duration.ofHours(1))
+                    .httpOnly(false).path("/").build();
+            log.debug("Cookie: {}", cookie);
+            exchange.getResponse().getCookies().add("XSRF-TOKEN", cookie);
+        }).then(chain.filter(exchange));
+    }
+}
+```
+
+## 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-cloud-sample/tree/master/spring-cloud-gateway-sample/spring-cloud-gateway-csrf)获得。

@@ -1,0 +1,129 @@
+---
+title: '注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解'
+date: 2022-05-09 12:13:37
+tags: ['SpringMvc']
+draft: false
+authors: ['default']
+images: ['/static/images/blogs/spring-mvc.png']
+---
+
+#### @PathVariable
+
+绑定请求参数，当`@RequestMapping(value="/get/{id}"）`，可以获取url格式`/get/{id}`中`{id}`的值。
+
+| 属性       | 说明                                    |
+| :------- | :------------------------------------ |
+| value    | 指定request参数名                          |
+| name     | 指定request参数名（与value二选一）               |
+| required | 是否需要该参数。 默认为true，如果请求中缺少参数，则会引发**异常** |
+
+当url为 `get/{id}/{name}`
+
+```java
+@RequestMapping("/get/{id}/{name}")
+public String get(@PathVariable Integer id,@PathVariable String name)
+```
+
+------
+
+当需要对url变量进行更加精确的定义时，可以定义正则表达式进行更精确地控制，定义语法是`{变量名: 正则表达式}`
+
+```
+@RequestMapping("/get/{name:[a-zA-Z0-9]+}")
+public String get(@PathVariable String name)
+```
+
+如此设置URL变量规则后，不合法的URL则不会被处理，直接由SpringMVC框架返回404NotFound。
+
+
+
+#### @RequestParam
+
+绑定来自请求url中的参数，可以获取url格式：?username="zhangsan"。
+
+| 属性           | 说明                                       |
+| :----------- | :--------------------------------------- |
+| value        | 指定request参数名                             |
+| name         | 指定request参数名（与value二选一）                  |
+| required     | 是否需要该参数。 默认为true，如果请求中缺少参数，则会引发**异常**    |
+| defaultValue | 未提供request参数或具有空值时用作后备的默认值,当设置默认值时，required隐式的设为了false |
+
+如果在传递参数时url是?userName=zhangsan&userName=wangwu，即两个同名参数，后台可以用以下方法接收：
+
+```java
+public String getUserName(@RequestParam(value="userName") String []  userNames)
+//或者是
+public String getUserName(@RequestParam(value="list") List<String> list)
+```
+
+##### Get/POST请求测试
+
+```java
+public String get(@RequestParam Map map)
+//在url中？后面添加参数可以接收
+
+public String get(@RequestParam String id)
+//在url中？后面添加参数可以接收
+
+public String get(@RequestParam Object object)
+//参数接收不到
+```
+
+
+
+#### @RequestBody
+
+绑定来自HTTP**请求体** 的参数
+
+**@RequestBody用来处理 Content-Type 为 application/json、application/xml编码的内容**
+
+| 属性       | 说明                                    |
+| :------- | :------------------------------------ |
+| required | 是否需要该参数。 默认为true，如果请求中缺少参数，则会引发**异常** |
+
+##### GET/POST 请求测试
+
+```java
+public String get(@RequestBody Map map)
+//json参数可以接收
+
+public String get(@RequestBody String id)
+//json参数可以接收,但是字符串接收的是整个json格式的字符串,如打印：{"id":3,"name":"ddd"}
+
+public String get(@RequestBody Object object)
+//json参数可以接收
+```
+
+
+
+指定实体类中的属性对应json中的key值`@JsonProperty`、`@JsonAlias`
+
+```java
+@Data
+public class Employee {
+    @JsonProperty(value = "ids") //json中的key为ids可以识别，key为id不能识别
+    private String id;
+    @JsonAlias(value = {"NAME","ii"}) //json中的key为NAME、ii、name都能识别
+    private String name;
+}
+```
+
+
+
+#### @RequestHeader
+
+从Http请求头中提取指定的某个请求头。
+
+| 属性           | 说明                                       |
+| :----------- | :--------------------------------------- |
+| value        | 指定请求头中的key                               |
+| name         | 指定请求头中的key（与value二选一）                    |
+| required     | 是否需要该参数。 默认为true，如果请求中缺少参数，则会引发**异常**    |
+| defaultValue | 未提供request参数或具有空值时用作后备的默认值,当设置默认值时，required隐式的设为了false |
+
+```java
+ public String get(@RequestHeader(value = "Content-Type") String contextType){}
+```
+
+
+

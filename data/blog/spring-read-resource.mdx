@@ -1,0 +1,127 @@
+---
+title: Spring项目的resources目录下的文件读取
+date: 2022-05-09 20:50:16
+tags: ['SpringBoot']
+draft: false
+authors: ['default']
+images: ['/static/images/blogs/springboot.jpeg']
+---
+
+### src/main/resources和src/test/resources下的资源读取方式
+
+**1.** 一般maven会将spring工程编译到target文件夹下，/target/classes就是其根目录。而src/main/resources下的文件被复制到了这个classes文件夹下。
+
+**2.** maven会将src/test/java文件夹下的代码编译到target/test-classes文件夹下。同样的，如果src/test/resources下有资源文件的话，就复制到target/test-classes文件夹下。
+
+测试代码运行时，优先使用test-classes文件夹下的资源文件，如果不存在，再使用classes文件夹下的资源文件。
+
+
+
+**前两种底层代码都是通过类加载器读取流** 
+
+**1.** 使用**org.springframework.core.io.ClassPathResource**读取，开发环境和生产环境(Linux下jar包运行读取)都能读取。
+
+```java
+Resource resource=new ClassPathResource("3.png");
+InputStream fis = resource.getInputStream();
+OutputStream fos=new FileOutputStream("E://3.png");
+int len=0;
+byte[] buf=new byte[1024];
+while((len=fis.read(buf,0,buf.length))!=-1){
+    fos.write(buf,0,len);
+}
+fos.close();
+fis.close();
+```
+
+**2.** 使用流的方式来读取，两种方式，开发环境和生产环境(Linux下jar包运行读取)都能读取。
+
+方式一：
+
+```java
+InputStream fis = this.getClass().getResourceAsStream("/3.png");
+OutputStream fos=new FileOutputStream("E://3.png");
+int len=0;
+byte[] buf=new byte[1024];
+while((len=fis.read(buf,0,buf.length))!=-1){
+    fos.write(buf,0,len);
+}
+fos.close();
+fis.close();
+```
+
+方式二：
+
+```java
+InputStream fis = Thread.currentThread().getContextClassLoader().getResourceAsStream("/3.png");
+OutputStream fos=new FileOutputStream("E://3.png");
+int len=0;
+byte[] buf=new byte[1024];
+while((len=fis.read(buf,0,buf.length))!=-1){
+    fos.write(buf,0,len);
+}
+fos.close();
+fis.close();
+```
+
+
+
+**3.** 使用**org.springframework.core.io.ResourceLoader** 读取，开发环境和生产环境(Linux下jar包运行读取)都能读取。
+
+```java
+@Autowired
+ResourceLoader resourceLoader;
+
+@Test
+public void resourceLoaderTest() throws IOException {
+    Resource resource = resourceLoader.getResource("classpath:3.png");
+    InputStream fis = resource.getInputStream();
+    OutputStream fos=new FileOutputStream("E://3.png");
+    int len=0;
+    byte[] buf=new byte[1024];
+    while((len=fis.read(buf,0,buf.length))!=-1){
+        fos.write(buf,0,len);
+    }
+    fos.close();
+    fis.close();
+}
+```
+
+
+
+
+
+**4.** 使用**File file=new File("src/main/resources/file.txt");** 读取，只能在开发环境中读取，不能再生产环境中读取(Linux下jar包运行读取)。
+
+```java
+File file=new File("src/main/resources/3.png");
+InputStream fis=new FileInputStream(file);
+OutputStream fos=new FileOutputStream("E://3.png");
+int len=0;
+byte[] buf=new byte[1024];
+while ((len=fis.read(buf,0,buf.length))!=-1){
+  fos.write(buf,0,len);
+  System.out.println("---");
+}
+fos.close();
+fis.close();
+```
+
+**5.** 使用**org.springframework.util.ResourceUtils** 读取，只能在开发环境中读取，不能再生产环境中读取(Linux下jar包运行读取)。
+
+```java
+File file = ResourceUtils.getFile("src/main/resources/3.png");
+InputStream fis=new FileInputStream(file);
+OutputStream fos=new FileOutputStream("E://3.png");
+int len=0;
+byte[] buf=new byte[1024];
+while((len=fis.read(buf,0,buf.length))!=-1){
+    fos.write(buf,0,len);
+}
+fos.close();
+fis.close();
+```
+
+### 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-boot-sample/blob/master/spring-static-resource/src/main/java/com/relive/ResourceFileReader.java)获得。
