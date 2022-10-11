@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>/about</loc>
+  </url>
+
+  <url>
+    <loc>/blog</loc>
+  </url>
+
+  <url>
+    <loc></loc>
+  </url>
+
+  <url>
+    <loc>/projects</loc>
+  </url>
+
+  <url>
+    <loc>/tags</loc>
+  </url>
+
+  <url>
+    <loc>/blog/custom-oauth2-consent-page</loc>
+  </url>
+
+  <url>
+    <loc>/blog/factory-pattern</loc>
+  </url>
+
+  <url>
+    <loc>/blog/java-ssh</loc>
+  </url>
+
+  <url>
+    <loc>/blog/java-weekly-1</loc>
+  </url>
+
+  <url>
+    <loc>/blog/jwk-cache-and-rotate-key</loc>
+  </url>
+
+  <url>
+    <loc>/blog/mybatis-mysql-keyword</loc>
+  </url>
+
+  <url>
+    <loc>/blog/oauth2-client-model</loc>
+  </url>
+
+  <url>
+    <loc>/blog/oauth2-login</loc>
+  </url>
+
+  <url>
+    <loc>/blog/oauth2-pkce</loc>
+  </url>
+
+  <url>
+    <loc>/blog/persisrence-oauth2-client</loc>
+  </url>
+
+  <url>
+    <loc>/blog/singleton-pattern</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-gateway-csrf</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-mvc-annotation</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-read-resource</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-security-oauth2-jwt</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-start-event</loc>
+  </url>
+
+  <url>
+    <loc>/blog/springboot-integrate-redis</loc>
+  </url>
+
+  <url>
+    <loc>/blog/spring-gateway-oauth2</loc>
+  </url>
+
+  <url>
+    <loc>/blog/springn-security-oidc</loc>
+  </url>
+
+  <url>
+    <loc>/tags/java</loc>
+  </url>
+
+  <url>
+    <loc>/tags/mybatis</loc>
+  </url>
+
+  <url>
+    <loc>/tags/oauth2</loc>
+  </url>
+
+  <url>
+    <loc>/tags/springboot</loc>
+  </url>
+
+  <url>
+    <loc>/tags/redis</loc>
+  </url>
+
+  <url>
+    <loc>/tags/springcloud</loc>
+  </url>
+
+  <url>
+    <loc>/tags/springmvc</loc>
+  </url>
+
+  <url>
+    <loc>/tags/springsecurity</loc>
+  </url>
+
+  <url>
+    <loc>/tags/ssh</loc>
+  </url>
+
+  <url>
+    <loc>/tags/weekly</loc>
+  </url>
+</urlset>

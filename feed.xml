@@ -1,0 +1,204 @@
+
+  <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+      <title>ReLive27 Blog</title>
+      <link>/blog</link>
+      <description>ReLive27&#39;s personal blog and website</description>
+      <language>zh-cn</language>
+      <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
+      <webMaster>re_live27@163.com (ReLive27)</webMaster>
+      <lastBuildDate>Mon, 12 Sep 2022 09:56:37 GMT</lastBuildDate>
+      <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
+      
+  <item>
+    <guid>/blog/jwk-cache-and-rotate-key</guid>
+    <title>Spring Security OAuth2实现简单的密钥轮换及配置资源服务器JWK缓存</title>
+    <link>/blog/jwk-cache-and-rotate-key</link>
+    undefined
+    <pubDate>Mon, 12 Sep 2022 09:56:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-gateway-oauth2</guid>
+    <title>将Spring Cloud Gateway 与OAuth2模式一起使用</title>
+    <link>/blog/spring-gateway-oauth2</link>
+    undefined
+    <pubDate>Sat, 13 Aug 2022 12:07:52 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/springn-security-oidc</guid>
+    <title>Spring Security和OpenID Connect</title>
+    <link>/blog/springn-security-oidc</link>
+    undefined
+    <pubDate>Mon, 01 Aug 2022 20:35:28 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/oauth2-login</guid>
+    <title>Spring Security OAuth2登录</title>
+    <link>/blog/oauth2-login</link>
+    undefined
+    <pubDate>Mon, 25 Jul 2022 20:01:01 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/oauth2-pkce</guid>
+    <title>Spring Security OAuth2 带有用于代码交换的证明密钥 (PKCE) 的授权码流</title>
+    <link>/blog/oauth2-pkce</link>
+    undefined
+    <pubDate>Sun, 17 Jul 2022 12:21:50 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/oauth2-client-model</guid>
+    <title>Spring Security OAuth2客户端凭据授权</title>
+    <link>/blog/oauth2-client-model</link>
+    undefined
+    <pubDate>Sat, 09 Jul 2022 18:22:26 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
+  <item>
+    <guid>/blog/persisrence-oauth2-client</guid>
+    <title>Spring Security 持久化OAuth2客户端</title>
+    <link>/blog/persisrence-oauth2-client</link>
+    undefined
+    <pubDate>Sun, 03 Jul 2022 11:55:25 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/custom-oauth2-consent-page</guid>
+    <title>自定义OAuth2授权同意页面</title>
+    <link>/blog/custom-oauth2-consent-page</link>
+    undefined
+    <pubDate>Tue, 28 Jun 2022 19:40:29 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-security-oauth2-jwt</guid>
+    <title>将JWT与Spring Security OAuth2结合使用</title>
+    <link>/blog/spring-security-oauth2-jwt</link>
+    undefined
+    <pubDate>Sun, 26 Jun 2022 15:58:00 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-gateway-csrf</guid>
+    <title>SpringGateway使用SpringSecurity防止CSRF攻击</title>
+    <link>/blog/spring-gateway-csrf</link>
+    undefined
+    <pubDate>Wed, 22 Jun 2022 18:49:48 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringCloud</category>
+  </item>
+
+  <item>
+    <guid>/blog/java-weekly-1</guid>
+    <title>Java Weekly 第1期</title>
+    <link>/blog/java-weekly-1</link>
+    undefined
+    <pubDate>Sun, 12 Jun 2022 17:24:47 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>weekly</category>
+  </item>
+
+  <item>
+    <guid>/blog/mybatis-mysql-keyword</guid>
+    <title>Mybatis-plus遇到MySQL关键字如何解决</title>
+    <link>/blog/mybatis-mysql-keyword</link>
+    undefined
+    <pubDate>Wed, 18 May 2022 17:33:52 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>mybatis</category><category>java</category>
+  </item>
+
+  <item>
+    <guid>/blog/factory-pattern</guid>
+    <title>设计模式-工厂方法模式</title>
+    <link>/blog/factory-pattern</link>
+    undefined
+    <pubDate>Sun, 15 May 2022 20:24:52 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>java</category>
+  </item>
+
+  <item>
+    <guid>/blog/java-ssh</guid>
+    <title>使用Java连接SSH</title>
+    <link>/blog/java-ssh</link>
+    undefined
+    <pubDate>Sun, 15 May 2022 17:24:47 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>ssh</category><category>java</category>
+  </item>
+
+  <item>
+    <guid>/blog/singleton-pattern</guid>
+    <title>设计模式-单例模式</title>
+    <link>/blog/singleton-pattern</link>
+    undefined
+    <pubDate>Wed, 11 May 2022 20:26:19 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>java</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-start-event</guid>
+    <title>SpringBoot启动完成前后执行某个方法</title>
+    <link>/blog/spring-start-event</link>
+    undefined
+    <pubDate>Tue, 10 May 2022 21:10:10 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringBoot</category>
+  </item>
+
+  <item>
+    <guid>/blog/springboot-integrate-redis</guid>
+    <title>SpringBoot整合redis</title>
+    <link>/blog/springboot-integrate-redis</link>
+    undefined
+    <pubDate>Tue, 10 May 2022 20:23:20 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringBoot</category><category>redis</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-read-resource</guid>
+    <title>Spring项目的resources目录下的文件读取</title>
+    <link>/blog/spring-read-resource</link>
+    undefined
+    <pubDate>Mon, 09 May 2022 20:50:16 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringBoot</category>
+  </item>
+
+  <item>
+    <guid>/blog/spring-mvc-annotation</guid>
+    <title>注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</title>
+    <link>/blog/spring-mvc-annotation</link>
+    undefined
+    <pubDate>Mon, 09 May 2022 12:13:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringMvc</category>
+  </item>
+
+    </channel>
+  </rss>

@@ -1,0 +1,24 @@
+
+  <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+      <title>ReLive27 Blog</title>
+      <link>/blog</link>
+      <description>ReLive27&#39;s personal blog and website</description>
+      <language>zh-cn</language>
+      <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
+      <webMaster>re_live27@163.com (ReLive27)</webMaster>
+      <lastBuildDate>Mon, 09 May 2022 12:13:37 GMT</lastBuildDate>
+      <atom:link href="/tags/springmvc/feed.xml" rel="self" type="application/rss+xml"/>
+      
+  <item>
+    <guid>/blog/spring-mvc-annotation</guid>
+    <title>注解@PathVariable、@RequestParam、@RequestBody、@RequestHeader讲解</title>
+    <link>/blog/spring-mvc-annotation</link>
+    undefined
+    <pubDate>Mon, 09 May 2022 12:13:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringMvc</category>
+  </item>
+
+    </channel>
+  </rss>
