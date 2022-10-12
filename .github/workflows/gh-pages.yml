@@ -6,6 +6,12 @@ on:
       - main
   pull_request:
 
+env:
+  NEXT_PUBLIC_GISCUS_REPO: ${{ secrets.GISCUS_REPO }}
+  NEXT_PUBLIC_GISCUS_REPOSITORY_ID: ${{ secrets.DATA_REPO_ID }}
+  NEXT_PUBLIC_GISCUS_CATEGORY: ${{ secrets.DATA_CATEGORY }}
+  NEXT_PUBLIC_GISCUS_CATEGORY_ID: ${{ secrets.DATA_CATEGORY_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-20.04
