@@ -1,5 +1,7 @@
 import Image from '@/components/Image'
 import { PageSEO } from '@/components/SEO'
+import { RoughNotation } from 'react-rough-notation'
+
 
 export default function AuthorLayout({ children, frontMatter }) {
   const { name, avatar, occupation, company, email, twitter, linkedin, github } = frontMatter
@@ -26,7 +28,73 @@ export default function AuthorLayout({ children, frontMatter }) {
             <div className="text-gray-500 dark:text-gray-400">{occupation}</div>
             <div className="text-gray-500 dark:text-gray-400">{company}</div>
           </div>
-          <div className="prose max-w-none pt-8 pb-8 dark:prose-dark xl:col-span-2">{children}</div>
+          <div className="prose max-w-none pt-8 pb-8 dark:prose-dark xl:col-span-2">
+            {children}
+            <p className='mt-8'>
+              <a
+                  className='!font-normal !text-black !no-underline dark:!text-white'
+                  href='{resume}'
+                  target='_blank'
+                  rel='noreferrer'
+              >
+                <RoughNotation
+                    show
+                    type='box'
+                    animationDelay={250}
+                    animationDuration={2000}
+                    strokeWidth={2}
+                    color='#F5E1FF'
+                >
+                  Resume
+                </RoughNotation>
+              </a>
+              <h2 className='mt-8 mb-4 text-2xl font-semibold dark:text-white'>
+                Skills
+              </h2>
+              <div className='mb-2 flex flex-wrap'>
+                 <span
+                     className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                     style={{background: '#00ADD8'}}
+                     key='Java'
+                 >Java</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#68A063'}}
+                    key='Spring'
+                >Spring</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#4285F4'}}
+                    key='MySQL'
+                >MySQL</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#D82C20'}}
+                    key='Redis'
+                >Redis</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#000000'}}
+                    key='Kafka'
+                >Kafka</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#0DB7Ed'}}
+                    key='Docker'
+                >Docker</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#26BE00'}}
+                    key='Nginx'
+                >Nginx</span>
+                <span
+                    className='mr-2 mb-2 rounded-sm px-2 py-1 text-xs font-medium text-white'
+                    style={{background: '#FF9900'}}
+                    key='Git'
+                >Git</span>
+              </div>
+            </p>
+          </div>
         </div>
       </div>
     </>
