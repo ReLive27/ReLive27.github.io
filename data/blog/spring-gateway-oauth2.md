@@ -900,7 +900,7 @@ public class ArticleController {
 
 在我们启动完成服务后，我们在浏览器中访问[http://127.0.0.1:8070/resource/article/read](http://127.0.0.1:8070/resource/article/read) ,我们将重定向到授权服务登录页，如图所示：
 
-![](/static/images/blogs/spring-gateway-oauth2-login.pngg)
+![](/static/images/blogs/spring-gateway-oauth2-login.png)
 
 
 
