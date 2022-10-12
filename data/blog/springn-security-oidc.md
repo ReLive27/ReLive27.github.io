@@ -388,7 +388,7 @@ public class IdTokenCustomizerConfig {
 
 这是我们本文中RP服务使用的相关数据库表，涉及相关创建表及初始化数据的SQL语句可以[从这里](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login/rp/src/main/resources/db/migration)获取。
 
-![](https://relive27.github.io/static/images/blogs/spring-oidc-sql-model.png)
+![](../static/images/blogs/spring-oidc-sql-model.png)
 
 
 

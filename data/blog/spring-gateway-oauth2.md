@@ -39,7 +39,7 @@ Spring Cloud Gateway是一个构建在 Spring 生态之上的 API Gateway。 建
 
 OpenID Connect 定义了一种基于 OAuth2 授权代码流的最终用户身份验证机制。下图是Spring Cloud Gateway与授权服务进行身份验证完整流程，为了清楚起见，其中一些参数已被省略。
 
-![](/static/images/blogs/spring-gateway-oauth2.drawio.png)
+![](../static/images/blogs/spring-gateway-oauth2.drawio.png)
 
 
 
@@ -55,7 +55,7 @@ OpenID Connect 定义了一种基于 OAuth2 授权代码流的最终用户身份
 
 我们创建了基本RBAC0权限模型用于本文示例讲解，并提供了OAuth2授权服务持久化存储所需表结构和OAuth2客户端持久化存储所需表结构。通过oauth2_client_role定义外部系统角色与本平台角色映射关系。涉及相关创建表及初始化数据的SQL语句可以[从这里](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/gateway-oauth2-login/auth-server/src/main/resources/db/migration)获取。
 
-![](/static/images/blogs/spring-gateway-oauth2-db.png)
+![](../static/images/blogs/spring-gateway-oauth2-db.png)
 
 
 
@@ -388,7 +388,7 @@ public class JdbcUserDetailsService implements UserDetailsService {
 
 在尝试请求未认证接口将会引导用户到登录页面并提示输入用户名密码，结果如下：
 
-![](/static/images/blogs/spring-gateway-oauth2-login-page.png)
+![](../static/images/blogs/spring-gateway-oauth2-login-page.png)
 
 <br />
 
@@ -900,7 +900,7 @@ public class ArticleController {
 
 在我们启动完成服务后，我们在浏览器中访问[http://127.0.0.1:8070/resource/article/read](http://127.0.0.1:8070/resource/article/read) ,我们将重定向到授权服务登录页，如图所示：
 
-![](/static/images/blogs/spring-gateway-oauth2-login.png)
+![](../static/images/blogs/spring-gateway-oauth2-login.png)
 
 
 
@@ -908,7 +908,7 @@ public class ArticleController {
 
 在我们输入用户名密码（admin/password）后，将获取到请求响应信息：
 
-![](/static/images/blogs/spring-gateway-oauth2-response1.png)
+![](../static/images/blogs/spring-gateway-oauth2-response1.png)
 
 
 
@@ -916,7 +916,7 @@ public class ArticleController {
 
 admin用户所属角色是`ROLE_ADMIN`，所以我们尝试请求[http://127.0.0.1:8070/resource/article/write?name=article3](http://127.0.0.1:8070/resource/article/write?name=article3)
 
-![](/static/images/blogs/spring-gateway-oauth2-response2.png)
+![](../static/images/blogs/spring-gateway-oauth2-response2.png)
 
 
 
@@ -924,7 +924,7 @@ admin用户所属角色是`ROLE_ADMIN`，所以我们尝试请求[http://127.0.0
 
 注销登录后，我们同样访问[http://127.0.0.1:8070/resource/article/read](http://127.0.0.1:8070/resource/article/read) ，不过这次使用Github登录，响应信息如图所示：
 
-![](/static/images/blogs/spring-gateway-oauth2-response3.png)
+![](../static/images/blogs/spring-gateway-oauth2-response3.png)
 
 可以看到响应信息中用户已经切换为你的Github用户名。
 
@@ -934,7 +934,7 @@ admin用户所属角色是`ROLE_ADMIN`，所以我们尝试请求[http://127.0.0
 
 Github登录的用户默认赋予角色为`ROLE_OPERATION`,而`ROLE_OPERATION`是没有[http://127.0.0.1:8070/resource/article/write?name=article3](http://127.0.0.1:8070/resource/article/write?name=article3 ) 访问权限，我们来尝试测试下: 
 
-![](/static/images/blogs/spring-gateway-oauth2-response4.png)
+![](../static/images/blogs/spring-gateway-oauth2-response4.png)
 
 
 

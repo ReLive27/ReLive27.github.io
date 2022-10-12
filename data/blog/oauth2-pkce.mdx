@@ -8,7 +8,7 @@ authors: ['default']
 
 ## Spring Security OAuth2 带有用于代码交换的证明密钥 (PKCE) 的授权码流
 
-![](/static/images/blogs/oauth2.png)
+![](../static/images/blogs/oauth2.png)
 
 ### 概述
 
@@ -30,7 +30,7 @@ OAuth2依据是否能持有客户端密钥，将客户端分为两种类型：**
 
 PKCE 有自己独立的[规范](https://tools.ietf.org/html/rfc7636)。它使应用程序能够在公共客户端中使用授权码流程。
 
-![](/static/images/blogs/PKCE.drawio.png)
+![](../static/images/blogs/PKCE.drawio.png)
 
 1. 用户在客户端请求资源。
 2. 客户端创建并记录名为 code_verifier 的秘密信息，然后客户端根据 code_verifier 计算出 code_challenge，它的值可以是 code_verifier，也可以是 code_verifier 的 SHA-256 散列，但是应该优先考虑使用密码散列，因为它能防止验证器本身遭到截获。

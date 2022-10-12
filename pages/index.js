@@ -42,7 +42,7 @@ export default function Home({ posts }) {
             </RoughNotation>
           </Link>
           or
-          <Link className='ml-2 font-normal text-black' href='/about'>
+          <Link className='ml-2 font-normal text-black' href='/contact'>
             <RoughNotation
                 show
                 type='highlight'
