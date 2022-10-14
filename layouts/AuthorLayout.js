@@ -1,6 +1,9 @@
 import Image from '@/components/Image'
 import { PageSEO } from '@/components/SEO'
 import { RoughNotation } from 'react-rough-notation'
+import SocialIcon from '@/components/social-icons'
+import siteMetadata from "@/data/siteMetadata";
+
 
 
 export default function AuthorLayout({ children, frontMatter }) {
@@ -27,6 +30,12 @@ export default function AuthorLayout({ children, frontMatter }) {
             <h3 className="pt-4 pb-2 text-2xl font-bold leading-8 tracking-tight">{name}</h3>
             <div className="text-gray-500 dark:text-gray-400">{occupation}</div>
             <div className="text-gray-500 dark:text-gray-400">{company}</div>
+            <div className="flex space-x-3 pt-6">
+              <SocialIcon kind="mail" href={`mailto:${siteMetadata.email}`} size="6" />
+              <SocialIcon kind="github" href={siteMetadata.github} size="6" />
+              <SocialIcon kind="juejin" href={siteMetadata.juejin} size="6" />
+              <SocialIcon kind="csdn" href={siteMetadata.csdn} size="6" />
+            </div>
           </div>
           <div className="prose max-w-none pt-8 pb-8 dark:prose-dark xl:col-span-2">
             {children}

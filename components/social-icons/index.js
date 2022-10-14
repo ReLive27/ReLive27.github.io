@@ -4,12 +4,16 @@ import Facebook from './facebook.svg'
 import Youtube from './youtube.svg'
 import Linkedin from './linkedin.svg'
 import Twitter from './twitter.svg'
+import Juejin from './juejin.svg'
+import CSDN from './csdn.svg'
 
 // Icons taken from: https://simpleicons.org/
 
 const components = {
   mail: Mail,
   github: Github,
+  juejin: Juejin,
+  csdn: CSDN,
   facebook: Facebook,
   youtube: Youtube,
   linkedin: Linkedin,

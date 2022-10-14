@@ -12,6 +12,8 @@ const siteMetadata = {
   socialBanner: '/static/images/banner.png',
   email: 're_live27@163.com',
   github: 'https://github.com/ReLive27',
+  juejin: 'https://juejin.cn/user/4051073081555869',
+  csdn: 'https://blog.csdn.net/new_ord?spm=1000.2115.3001.5343',
   twitter: 'https://twitter.com/Twitter',
   facebook: 'https://facebook.com',
   youtube: 'https://youtube.com',
