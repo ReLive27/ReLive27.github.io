@@ -68,7 +68,7 @@ export default function Home({posts}) {
                                         <SocialIcon kind="educate" href="/blog" size="6"/>
                                         <span
                                             className="pr-6 text-gray-900 dark:text-gray-100">Read my article</span></span><span
-                                        className="pl-6 text-amber-400 transition duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">Blog&nbsp;→</span></span></a>
+                                        className="pl-6 text-primary-400 transition duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">Blog&nbsp;→</span></span></a>
                                 </Link>
                             </div>
                         </div>
