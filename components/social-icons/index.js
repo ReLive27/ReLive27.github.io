@@ -6,6 +6,9 @@ import Linkedin from './linkedin.svg'
 import Twitter from './twitter.svg'
 import Juejin from './juejin.svg'
 import CSDN from './csdn.svg'
+import Book from './book.svg'
+import Chemistry from './chemistry.svg'
+import Educate from './educate.svg'
 
 // Icons taken from: https://simpleicons.org/
 
@@ -18,6 +21,9 @@ const components = {
   youtube: Youtube,
   linkedin: Linkedin,
   twitter: Twitter,
+  book: Book,
+  chemistry: Chemistry,
+  educate: Educate,
 }
 
 const SocialIcon = ({ kind, href, size = 8 }) => {
