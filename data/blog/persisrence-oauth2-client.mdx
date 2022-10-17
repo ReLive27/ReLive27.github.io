@@ -9,7 +9,7 @@ authors: ['default']
 
 ## Spring Security 持久化OAuth2客户端
 
-在[之前文章中](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)介绍过了客户端通过向授权服务器（使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn)）请求授权并访问资源服务器受保护资源。在创建OAuth2客户端服务时，客户端注册通常从`application.yml `文件中自动加载，Spring 自动配置使用`OAuth2ClientProperties`在`spring.security.oauth2.client.registration.[registrationId]`创建一个`ClientRegistration`并实例化`ClientRegistrationRepository`。
+在[之前文章中](https://relive27.github.io/blog/spring-security-oauth2-jwt)介绍过了客户端通过向授权服务器（使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server#learn)）请求授权并访问资源服务器受保护资源。在创建OAuth2客户端服务时，客户端注册通常从`application.yml `文件中自动加载，Spring 自动配置使用`OAuth2ClientProperties`在`spring.security.oauth2.client.registration.[registrationId]`创建一个`ClientRegistration`并实例化`ClientRegistrationRepository`。
 
 以下Spring自动配置`OAuth2ClientRegistrationRepositoryConfiguration`代码如下：
 
@@ -350,7 +350,7 @@ public class PersistenceClientController {
 
 <br />
 
-在本文中，您看到了OAuth2客户端服务持久化到数据库的实现方法，对于其他授权服务器和资源服务器配置将不再讲解，如果您感兴趣可以参考	此文章[将JWT与Spring Security OAuth2结合使用](https://relive27.github.io/2022/06/26/spring-security-oauth2-jwt/)。
+在本文中，您看到了OAuth2客户端服务持久化到数据库的实现方法，对于其他授权服务器和资源服务器配置将不再讲解，如果您感兴趣可以参考	此文章[将JWT与Spring Security OAuth2结合使用](https://relive27.github.io/blog/spring-security-oauth2-jwt)。
 
 
 

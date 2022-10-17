@@ -12,7 +12,7 @@ authors: ['default']
 
 ### 概述
 
-Spring Cloud Gateway是一个构建在 Spring 生态之上的 API Gateway。 建立在[Spring Boot 2.x](https://spring.io/projects/spring-boot#learn)、[Spring WebFlux](https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html)和[Project Reactor](https://projectreactor.io/docs)之上。
+Spring Cloud Gateway是一个构建在 Spring 生态之上的 API Gateway。 建立在 [Spring Boot 2.x](https://spring.io/projects/spring-boot#learn) 、[Spring WebFlux](https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html) 和 [Project Reactor](https://projectreactor.io/docs) 之上。
 
 
 
@@ -402,7 +402,7 @@ public class JdbcUserDetailsService implements UserDetailsService {
 
 #### Github身份认证
 
-首先我们将配置Github客户端信息，你只需要更改其中**clientId**和**clientSecret**。其次我们将使用[Spring Security 持久化OAuth2客户端](https://relive27.github.io/2022/07/03/persisrence-oauth2-client/) 文中介绍的*JdbcClientRegistrationRepository*持久层容器类将GitHub客户端信息存储在数据库中：
+首先我们将配置Github客户端信息，你只需要更改其中**clientId**和**clientSecret**。其次我们将使用[Spring Security 持久化OAuth2客户端](https://relive27.github.io/blog/persisrence-oauth2-client) 文中介绍的*JdbcClientRegistrationRepository*持久层容器类将GitHub客户端信息存储在数据库中：
 
 ```java
     @Bean

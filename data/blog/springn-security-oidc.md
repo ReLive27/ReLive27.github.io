@@ -440,7 +440,7 @@ spring:
 
 <br />
 
-下面我们将配置OAuth2客户端基于MySql数据库的存储方式，你也可以从[Spring Security 持久化OAuth2客户端](https://relive27.github.io/2022/07/03/persisrence-oauth2-client/)了解详细信息。
+下面我们将配置OAuth2客户端基于MySql数据库的存储方式，你也可以从[Spring Security 持久化OAuth2客户端](https://relive27.github.io/blog/persisrence-oauth2-client)了解详细信息。
 
 ```java
     /**
@@ -514,7 +514,7 @@ public class JdbcUserDetailsService implements UserDetailsService {
 
 <br />
 
-现在我们将要解决如何将IdP服务用户角色映射为RP服务已有的角色，在[前面文章](https://relive27.github.io/2022/07/25/oauth2-login/)中曾使用`GrantedAuthoritiesMapper`映射角色。在本文中我们将使用*OAuth2UserService*添加角色映射策略，它与`GrantedAuthoritiesMapper`相比更加灵活:
+现在我们将要解决如何将IdP服务用户角色映射为RP服务已有的角色，在[前面文章](https://relive27.github.io/blog/oauth2-login)中曾使用`GrantedAuthoritiesMapper`映射角色。在本文中我们将使用*OAuth2UserService*添加角色映射策略，它与`GrantedAuthoritiesMapper`相比更加灵活:
 
 ```java
 public class OidcRoleMappingUserService implements OAuth2UserService<OidcUserRequest, OidcUser> {
