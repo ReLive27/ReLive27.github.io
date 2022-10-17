@@ -2,7 +2,7 @@
   <img alt="Logo" src="https://github.com/ReLive27/ReLive27.github.io/blob/main/public/static/images/logo.png" width="100px" />
 </div>
 <h1 align="center">
-  <a href="https://relive27.github.io/" style="text-decoration: none">reLive27.github.io</a>
+  <a href="https://relive27.github.io/" style="text-decoration: none;color: black">reLive27.github.io</a>
 </h1>
 <p align="center">
   My blog built with <a href="https://nextjs.org/" target="_blank">Nextjs</a> and hosted with <a href="https://pages.github.com/" target="_blank">GitHub Pages</a>
