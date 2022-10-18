@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Mon, 12 Sep 2022 09:56:37 GMT</lastBuildDate>
+      <lastBuildDate>Mon, 17 Oct 2022 18:22:26 GMT</lastBuildDate>
       <atom:link href="/tags/springsecurity/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-jwk-consul-config</guid>
+    <title>将Spring Security OAuth2授权服务JWK与Consul 配置中心结合使用</title>
+    <link>/blog/oauth2-jwk-consul-config</link>
+    undefined
+    <pubDate>Mon, 17 Oct 2022 18:22:26 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/jwk-cache-and-rotate-key</guid>
     <title>Spring Security OAuth2实现简单的密钥轮换及配置资源服务器JWK缓存</title>

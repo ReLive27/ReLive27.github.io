@@ -49,6 +49,10 @@
   </url>
 
   <url>
+    <loc>/blog/oauth2-jwk-consul-config</loc>
+  </url>
+
+  <url>
     <loc>/blog/oauth2-login</loc>
   </url>
 
@@ -109,11 +113,11 @@
   </url>
 
   <url>
-    <loc>/tags/springboot</loc>
+    <loc>/tags/redis</loc>
   </url>
 
   <url>
-    <loc>/tags/redis</loc>
+    <loc>/tags/springboot</loc>
   </url>
 
   <url>

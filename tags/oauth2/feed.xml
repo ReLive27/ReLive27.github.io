@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sat, 13 Aug 2022 12:07:52 GMT</lastBuildDate>
+      <lastBuildDate>Mon, 17 Oct 2022 18:22:26 GMT</lastBuildDate>
       <atom:link href="/tags/oauth2/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-jwk-consul-config</guid>
+    <title>将Spring Security OAuth2授权服务JWK与Consul 配置中心结合使用</title>
+    <link>/blog/oauth2-jwk-consul-config</link>
+    undefined
+    <pubDate>Mon, 17 Oct 2022 18:22:26 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/spring-gateway-oauth2</guid>
     <title>将Spring Cloud Gateway 与OAuth2模式一起使用</title>
