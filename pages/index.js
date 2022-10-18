@@ -17,7 +17,7 @@ export default function Home({posts}) {
     return (
         <>
             <PageSEO title={siteMetadata.title} description={siteMetadata.description}/>
-            <div className='fade-in banner flex flex-1 flex-row justify-between px-6 py-10 dark:text-white lg:px-10'>
+            <div className='fade-in banner flex flex-1 flex-row flex-wrap justify-between px-6 py-10 dark:text-white lg:px-10'>
 
                 <div className="flex flex-col justify-center">
                     <h1 className='text-3xl font-bold dark:text-white lg:text-5xl'>
