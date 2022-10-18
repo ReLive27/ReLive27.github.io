@@ -1,0 +1,513 @@
+---
+title: 将Spring Security OAuth2授权服务JWK与Consul 配置中心结合使用
+date: 2022-10-17 18:22:26
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+## 将Spring Security OAuth2授权服务JWK与Consul 配置中心结合使用
+
+### 概述
+
+在[前文](https://relive27.github.io/blog/jwk-cache-and-rotate-key)中介绍了OAuth2授权服务简单的实现密钥轮换，与其不同，本文将通过[Consul](https://www.consul.io/)实现我们的目的。
+[Consul KV Store](https://developer.hashicorp.com/consul/api-docs/kv)提供了一个分层的KV存储，能够存储分布式键值，我们将利用Consul KV Store使资源服务器发现授权服务器的公钥，授权服务器将密钥通过HTTP API更新到KV Store。
+
+
+<br />
+
+**先决条件**：
+需要安装Consul软件，为此，您可以按照以下步骤操作。
+
+1. 下载Consul软件（https://developer.hashicorp.com/consul/downloads）
+2. 接下来解压缩下载的软件包
+3. 将可执行文件（如果要在Windows系统中安装）放在要启动Consul的文件夹下
+4. 接下来启动命令提示符（cmd)，并进入consul.exe所在路径下
+5. 通过键入`consul`命令检查Consul是否可用
+6. 最后，我们将通过执行此命令来运行Consul， `consul agent -dev`
+
+> 注意：`consul agent -dev`仅建议在开发模式中使用。
+
+
+### 授权服务实现
+本节中我们使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server)搭建OAuth2授权服务，并将此服务注册到Consul。
+
+#### Maven依赖
+
+```xml
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-config</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-authorization-server</artifactId>
+            <version>0.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+```
+
+#### 配置
+
+首先在`application.yml`中添加Consul配置，如您想了解具体配置参数解释可以参考[https://docs.spring.io/spring-cloud-consul/docs/current/reference/html/appendix.html](https://docs.spring.io/spring-cloud-consul/docs/current/reference/html/appendix.html)
+
+```yml
+spring:
+  config:
+    import: optional:consul:127.0.0.1:8500
+  application:
+    name: authorization-server
+  cloud:
+    consul:
+      scheme: http
+      host: 127.0.0.1
+      port: 8500
+      discovery:
+        instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}
+        health-check-path: /actuator/health
+        prefer-agent-address: true
+        hostname: ${spring.application.name}
+        catalog-services-watch-timeout: 5
+        health-check-timeout: 15s
+        deregister: true
+        heartbeat:
+          enabled: true
+        health-check-critical-timeout: 10s
+      config:
+        enabled: true
+        format: YAML
+        name: apps
+        data-key: data
+        prefix: config
+        profileSeparator: "::"
+
+```
+
+接下来我们将创建`AuthorizationServerConfig`配置类，用于配置OAuth2授权服务所需Bean，首先我们向授权服务注册一个OAuth2客户端：
+
+```java
+    @Bean
+    public RegisteredClientRepository registeredClientRepository() {
+        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("relive-client")
+                .clientSecret("{noop}relive-client")
+                .clientAuthenticationMethods(s -> {
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+                })
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+                .scope("message.read")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)//requireAuthorizationConsent：是否需要授权统同意
+                        .requireProofKey(false) //requireProofKey：是否仅支持PKCE
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED) //自包含令牌，使用JWT格式
+                        .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                        .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                        .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                        .reuseRefreshTokens(true) //是否重用refreshToken
+                        .build())
+                .build();
+
+
+        return new InMemoryRegisteredClientRepository(registeredClient);
+    }
+```
+OAuth2客户端主要信息如下，以下信息最终将于客户端服务保持一致。
+- clientId: relive-client
+- clientSecret: relive-client
+- redirectUri: http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code
+- scope: message.read
+
+
+使用Spring Authorization Server提供的授权服务默认配置，并将未认证的授权请求重定向到登录页面：
+
+```java
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        return http
+                .exceptionHandling(exceptions -> exceptions.
+                        authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+    }
+
+```
+
+自定义`ConsulConfigRotateJWKSource`实体类实现`JWKSource`，并通过`ConsulClient`操作KV Store更新[JWK](https://www.rfc-editor.org/rfc/rfc7517)。
+
+```java
+public class ConsulConfigRotateJWKSource<C extends SecurityContext> implements JWKSource<C> {
+    private ObjectMapper objectMapper = new ObjectMapper();
+    private final JWKSource<C> failoverJWKSource;
+    private final ConsulClient consulClient;
+    private final JWKSetCache jwkSetCache;
+    private final JWKGenerator<? extends JWK> jwkGenerator;
+    private KeyIDStrategy keyIDStrategy = this::generateKeyId;
+    private String path = "/config/apps/data";
+
+
+    public ConsulConfigRotateJWKSource(ConsulClient consulClient) {
+        this(consulClient, null, null, null);
+    }
+
+    public ConsulConfigRotateJWKSource(ConsulClient consulClient, long lifespan, long refreshTime, TimeUnit timeUnit) {
+        this(consulClient, new DefaultJWKSetCache(lifespan, refreshTime, timeUnit), null, null);
+    }
+
+    //...省略
+
+    @Override
+    public List<JWK> get(JWKSelector jwkSelector, C context) throws KeySourceException {
+        JWKSet jwkSet = this.jwkSetCache.get();
+        if (this.jwkSetCache.requiresRefresh() || jwkSet == null) {
+            try {
+                synchronized (this) {
+                    jwkSet = this.jwkSetCache.get();
+                    if (this.jwkSetCache.requiresRefresh() || jwkSet == null) {
+                        jwkSet = this.updateJWKSet(jwkSet);
+                    }
+                }
+            } catch (Exception e) {
+                List<JWK> failoverMatches = this.failover(e, jwkSelector, context);
+                if (failoverMatches != null) {
+                    return failoverMatches;
+                }
+
+                if (jwkSet == null) {
+                    throw e;
+                }
+            }
+        }
+        List<JWK> jwks = jwkSelector.select(jwkSet);
+        if (!jwks.isEmpty()) {
+            return jwks;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private JWKSet updateJWKSet(JWKSet jwkSet)
+            throws ConsulConfigKeySourceException {
+        JWK jwk;
+        try {
+            jwkGenerator.keyID(this.keyIDStrategy.generateKeyID());
+            jwk = jwkGenerator.generate();
+        } catch (JOSEException e) {
+            throw new ConsulConfigKeySourceException("Couldn't generate JWK:" + e.getMessage(), e);
+        }
+        List<JWK> jwks = new ArrayList<>();
+        jwks.add(jwk);
+        if (jwkSet != null) {
+            List<JWK> keys = jwkSet.getKeys();
+            List<JWK> updateJwks = new ArrayList<>(keys);
+            jwks.addAll(updateJwks);
+        }
+        JWKSet result = new JWKSet(jwks);
+        try {
+            consulClient.setKVValue(path, objectMapper.writeValueAsString(Collections.singletonMap("jwks", result.toString())));
+        } catch (JsonProcessingException e) {
+            throw new ConsulConfigKeySourceException("JWK cannot convert JSON:" + e.getMessage(), e);
+        }
+        jwkSetCache.put(result);
+        return result;
+    }
+
+    //...省略
+}
+
+```
+如果您以看过[Spring Security OAuth2实现简单的密钥轮换及配置资源服务器JWK缓存](https://relive27.github.io/blog/jwk-cache-and-rotate-key)，那么你会对于上述代码不在陌生。
+
+`ConsulConfigRotateJWKSource`遵循以下步骤：
+- 首先从`JWKSetCache`缓存中获取JWKSet（JWKSet仅包含未过期JWK），默认实现为`DefaultJWKSetCache`，在`DefaultJWKSetCache`包含两个重要属性，lifespan为缓存JWKSet时间，refreshTime为刷新时间。
+
+- 如果JWKSet不为空或不需要刷新密钥，则通过JWKSelector从指定的 JWKS 中选择与配置的条件匹配的JWK。
+
+- 否则，执行updateJWKSet(JWKSet jwkSet)生成新的密钥对添加进缓存，并更新到Consul KV Store。
+
+> 注意：path属性与`spring.cloud.consul.config`保持一致。
+
+<br />
+
+
+避免客户端发送使用以前颁发的密钥签名的 JWT 造成验证失败潜在问题，在令牌完全过期之前，我们需要在一段时间内保持两个密钥。所以授权服务在签发JWT令牌时，
+由于某一段时间存在多个密钥，我们需要指定最新密钥用于生成JWT，以下方式中我们在生成JWT前获取最新密钥的`kid` ：
+
+```java
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer(JWKSource<SecurityContext> jwkSource) {
+        return (context) -> {
+            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType()) ||
+                    OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
+
+                JWKSelector jwkSelector = new JWKSelector(new JWKMatcher.Builder().build());
+                List<JWK> jwks;
+                try {
+                    jwks = jwkSource.get(jwkSelector, null);
+                } catch (KeySourceException e) {
+                    throw new IllegalStateException("Failed to select the JWK(s) -> " + e.getMessage(), e);
+                }
+                String kid = jwks.stream().map(JWK::getKeyID)
+                        .max(String::compareTo)
+                        .orElseThrow(() -> new IllegalArgumentException("kid not found"));
+                context.getHeaders().keyId(kid);
+            }
+        };
+    }
+
+```
+本示例中JWK的`kid`使用时间戳定义，因此通过获取最大值kid放入Header中，在生成JWT时将使用最大值kid对应的JWK生成JWT。
+
+
+最后让我们配置Form表单认证方式保护我们的授权服务,并设置用户名和密码：
+```java
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
+                .formLogin(Customizer.withDefaults());
+
+        return http.build();
+    }
+
+    @Bean
+    UserDetailsService userDetailsService() {
+        UserDetails userDetails = User.withUsername("admin")
+                .password("{noop}password")
+                .roles("ADMIN")
+                .build();
+        return new InMemoryUserDetailsManager(userDetails);
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+```
+
+
+### 资源服务
+
+本节中我们使用[Spring Security](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/index.html)构建OAuth2资源服务器，
+并且我们将从Consul KV Store 中获取公钥以取代JWK Set Uri 配置。
+
+#### Maven依赖
+
+```xml
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-config</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+```
+
+#### 配置
+
+首先我们还是从`application.yml`配置开始，添加Consul配置，此处`spring.cloud.consul.config`配置与授权服务保持一致。
+
+```yml
+server:
+  port: 8090
+
+
+spring:
+  config:
+    import: optional:consul:127.0.0.1:8500
+  application:
+    name: resource-server
+  cloud:
+    consul:
+      host: 127.0.0.1
+      port: 8500
+      discovery:
+        instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}
+        health-check-path: /actuator/health
+        prefer-agent-address: true
+        hostname: ${spring.application.name}
+        catalog-services-watch-timeout: 5
+        health-check-timeout: 15s
+        deregister: true
+        heartbeat:
+          enabled: true
+        health-check-critical-timeout: 10s
+      config:
+        enabled: true
+        format: YAML
+        prefix: config
+        name: apps
+        data-key: data
+        profileSeparator: "::"
+
+```
+
+
+接下来我们将自定义`ConsulJWKSet`实体类取代默认配置，在`ConsulJWKSet`中获取Consul KV Store中公钥。
+
+```java
+
+public class ConsulJWKSet<C extends SecurityContext> implements JWKSource<C> {
+    @Value("${jwks:}")
+    private String key;
+
+    private final JWKSource<C> failoverJWKSource;
+
+    public ConsulJWKSet() {
+        this(null);
+    }
+
+    public ConsulJWKSet(JWKSource<C> failoverJWKSource) {
+        this.failoverJWKSource = failoverJWKSource;
+    }
+
+    @Override
+    public List<JWK> get(JWKSelector jwkSelector, C context) throws KeySourceException {
+        JWKSet jwkSet = null;
+        if (StringUtils.hasText(key)) {
+            try {
+                jwkSet = this.parseJWKSet();
+            } catch (Exception e) {
+                List<JWK> failoverMatches = this.failover(e, jwkSelector, context);
+                if (failoverMatches != null) {
+                    return failoverMatches;
+                }
+                throw e;
+            }
+
+            List<JWK> matches = jwkSelector.select(jwkSet);
+            if (!matches.isEmpty()) {
+                return matches;
+            }
+        }
+        return null;
+    }
+
+    private JWKSet parseJWKSet() {
+        try {
+            return JWKSet.parse(this.key);
+        } catch (ParseException ex) {
+            throw new IllegalArgumentException(ex);
+        }
+    }
+
+    //...省略
+}
+
+```
+
+利用`@RefreshScope`刷新机制实现公钥的动态加载：
+
+```java
+    @Bean
+    @RefreshScope
+    public JWKSource<SecurityContext> jwkSource() {
+        return new ConsulJWKSet<>();
+    }
+
+```
+
+使用`ConsulJWKSet`声明`JwtDecoder`覆盖自动配置中`JwtDecoder`：
+
+```java
+    @Bean
+    JwtDecoder jwtDecoder(final JWKSource<SecurityContext> jwkSource) {
+        ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+        jwtProcessor.setJWSKeySelector(new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource));
+        jwtProcessor.setJWTClaimsSetVerifier((claims, context) -> {
+        });
+        return new NimbusJwtDecoder(jwtProcessor);
+    }
+```
+
+之后我们将使用Spring Security 支持的JWT形式的 OAuth 2.0 保护测试接口，此处定义/resource/article必须拥有`message.read`权限才能授权访问：
+```java
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests((authorize) -> authorize
+                .antMatchers("/resource/article").hasAuthority("SCOPE_message.read")
+                .anyRequest().authenticated())
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+
+        return http.build();
+    }
+```
+
+
+最后，我们提供一个测试接口以供客户端调用：
+
+```java
+
+@RestController
+public class ArticleController {
+
+    @GetMapping("/resource/article")
+    public Map<String, Object> getArticle(@AuthenticationPrincipal Jwt jwt) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("principal", jwt.getClaims());
+        result.put("article", Arrays.asList("article1", "article2", "article3"));
+        return result;
+    }
+}
+```
+
+### 测试
+
+首先说明，本示例中OAuth2客户端服务与之前文章中的介绍并没有额外改动，所以在本文中将不单独介绍OAuth2客户端服务搭建，可以通过文末源码获取。
+
+我们将服务全部启动后，浏览器访问[http://127.0.0.1:8070/client/article](http://127.0.0.1:8070/client/article)，请求将重定向到授权服务登录页面，在我们键入用户名和密码（admin/password）后，最终响应结果将展现在页面上。
+
+#### 如何验证密钥是否轮换
+
+本示例中密钥轮换时间设置为5分钟。
+1. 首先我们通过浏览器访问客户端服务，完成认证和授权后页面将展示响应结果。
+2. 记录此时Consul KV Store中公钥信息。
+3. 5分钟后，我们打开新页面（建议打开无痕页面，避免使用之前请求中JSESSIONID），重新请求。
+4. 将此时Consul KV Store中公钥信息与之前比较，此时已经新增了一个公钥。
+5. 首次请求页面我们会发现依然可以正常访问。
+6. 密钥有效期本示例中设置为15分钟，待15分钟后，KV Store中已经移除首次存储的公钥。
+
+### 结论
+
+与往常一样，本文中使用的源代码可在 [GitHub](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-jwk-consul-config) 上获得。
