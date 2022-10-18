@@ -422,7 +422,7 @@ public class InMemoryJWKSetCache implements JWKSetCache {
 
 `InMemoryJWKSetCache`中put方法将密钥对及当前时间封装为`JWKWithTimestamp`并添加到`LinkedHashSet`。get方法从`LinkedHashSet`过滤获取未过期JWK并返回。
 
-此方式中并没有对过期密钥进行清除操作。
+此方式中使用`ScheduledFuture`开启单独任务清除过期密钥。
 
 
 
@@ -810,7 +810,7 @@ spring:
 
 <br />
 
-Spring Boot 自动配置一个具有默认缓存配置的*RedisCacheManager 。*但是，我们可以在缓存管理器初始化之前修改此配置，将缓存过期时间设置为**5分钟**。
+Spring Boot 自动配置一个具有默认缓存配置的*RedisCacheManager* 。但是，我们可以在缓存管理器初始化之前修改此配置，将缓存过期时间设置为**5分钟**。
 
 ```java
     @Bean
