@@ -35,6 +35,7 @@ export default function AuthorLayout({ children, frontMatter }) {
               <SocialIcon kind="github" href={siteMetadata.github} size="6" />
               <SocialIcon kind="juejin" href={siteMetadata.juejin} size="6" />
               <SocialIcon kind="csdn" href={siteMetadata.csdn} size="6" />
+              <SocialIcon kind="jianshu" href={siteMetadata.jianshu} size="6" />
             </div>
           </div>
           <div className="prose max-w-none pt-8 pb-8 dark:prose-dark xl:col-span-2">

@@ -9,6 +9,7 @@ import CSDN from './csdn.svg'
 import Book from './book.svg'
 import Chemistry from './chemistry.svg'
 import Educate from './educate.svg'
+import Jianshu from './jianshu.svg'
 
 // Icons taken from: https://simpleicons.org/
 
@@ -24,6 +25,7 @@ const components = {
   book: Book,
   chemistry: Chemistry,
   educate: Educate,
+  jianshu: Jianshu,
 }
 
 const SocialIcon = ({ kind, href, size = 8 }) => {

@@ -14,6 +14,7 @@ const siteMetadata = {
   github: 'https://github.com/ReLive27',
   juejin: 'https://juejin.cn/user/4051073081555869',
   csdn: 'https://blog.csdn.net/new_ord?spm=1000.2115.3001.5343',
+  jianshu: 'https://www.jianshu.com/u/0b9edc858424',
   twitter: 'https://twitter.com/Twitter',
   facebook: 'https://facebook.com',
   youtube: 'https://youtube.com',
