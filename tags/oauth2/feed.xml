@@ -12,7 +12,7 @@
       
   <item>
     <guid>/blog/oauth2-token-access-restrictions</guid>
-    <title>Spring Security OAuth 2.0 授权服务器结合Redis实现AccessToken速率限制</title>
+    <title>Spring Security OAuth 2.0 授权服务器结合Redis实现获取accessToken速率限制</title>
     <link>/blog/oauth2-token-access-restrictions</link>
     undefined
     <pubDate>Sat, 22 Oct 2022 12:21:50 GMT</pubDate>
