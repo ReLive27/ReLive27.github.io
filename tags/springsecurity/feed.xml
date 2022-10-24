@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Mon, 17 Oct 2022 18:22:26 GMT</lastBuildDate>
+      <lastBuildDate>Sat, 22 Oct 2022 12:21:50 GMT</lastBuildDate>
       <atom:link href="/tags/springsecurity/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-token-access-restrictions</guid>
+    <title>Spring Security OAuth 2.0 授权服务器结合Redis实现AccessToken速率限制</title>
+    <link>/blog/oauth2-token-access-restrictions</link>
+    undefined
+    <pubDate>Sat, 22 Oct 2022 12:21:50 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>OAuth2</category><category>SpringSecurity</category>
+  </item>
+
   <item>
     <guid>/blog/oauth2-jwk-consul-config</guid>
     <title>将Spring Security OAuth2授权服务JWK与Consul 配置中心结合使用</title>
