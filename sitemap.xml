@@ -117,15 +117,15 @@
   </url>
 
   <url>
-    <loc>/tags/springboot</loc>
-  </url>
-
-  <url>
     <loc>/tags/redis</loc>
   </url>
 
   <url>
     <loc>/tags/springcloud</loc>
+  </url>
+
+  <url>
+    <loc>/tags/springboot</loc>
   </url>
 
   <url>
