@@ -31,6 +31,16 @@
   </item>
 
   <item>
+    <guid>/blog/jwk-cache-and-rotate-key</guid>
+    <title>Spring Security OAuth2实现简单的密钥轮换及配置资源服务器JWK缓存</title>
+    <link>/blog/jwk-cache-and-rotate-key</link>
+    undefined
+    <pubDate>Mon, 12 Sep 2022 09:56:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
+  <item>
     <guid>/blog/spring-gateway-oauth2</guid>
     <title>将Spring Cloud Gateway 与OAuth2模式一起使用</title>
     <link>/blog/spring-gateway-oauth2</link>
