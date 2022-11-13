@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sat, 22 Oct 2022 12:21:50 GMT</lastBuildDate>
+      <lastBuildDate>Sun, 13 Nov 2022 13:50:01 GMT</lastBuildDate>
       <atom:link href="/tags/springsecurity/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-opaque-token</guid>
+    <title>Spring Security OAuth2 Opaque 令牌的简单使用指南</title>
+    <link>/blog/oauth2-opaque-token</link>
+    undefined
+    <pubDate>Sun, 13 Nov 2022 13:50:01 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/oauth2-token-access-restrictions</guid>
     <title>Spring Security OAuth 2.0 授权服务器结合Redis实现获取accessToken速率限制</title>
