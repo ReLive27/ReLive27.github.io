@@ -1,0 +1,271 @@
+---
+title: Spring Security OAuth2 Opaque 令牌的简单使用指南
+date: 2022-11-13 13:50:01
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+## Spring Security OAuth2 Opaque 令牌的简单使用指南
+
+### 概述
+
+JWT 是一种以广泛接受的 JSON 格式安全传输敏感信息的方法。包含的信息可能是关于用户的，也可能是关于令牌本身的，例如它的到期时间和发行者。
+但是将令牌信息打包放入令牌本身也有其不足之处。为了包含所有必要的声明以及保护这些声明所需的签名结构，令牌尺寸会变得非常大。而且，
+如果受保护资源完全依赖令牌本身所包含的信息，则一旦将有效的令牌生成并发布，想要撤回会非常困难。
+
+OAuth2 令牌内省协议定义了一种机制，让受保护资源能够主动向授权服务器查询令牌状态。本文我们不在使用JWT结构化令牌，而是使用不透明令牌做为访问令牌。
+顾名思义，不透明令牌就其携带的信息而言是不透明的。令牌只是一个标识符，指向存储在授权服务器上的信息；它通过授权服务器的内省得到验证。
+
+
+### 授权服务器
+本节中，我们将学习使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server)设置 OAuth 2.0 授权
+服务器，并且我们将使用不透明令牌，和以往文章中授权服务器生成JWT令牌配置相比，配置过程中仅有微小的变动。
+
+#### Maven依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+    <version>2.6.7</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-oauth2-authorization-server</artifactId>
+    <version>0.3.1</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <version>2.6.7</version>
+</dependency>
+```
+
+#### 配置
+
+首先我们创建`AuthorizationServerConfig`配置类为授权服务器注册一个客户端，我们将使用`RegisteredClient`定义客户端信息，由`RegisteredClientRepository`存储`RegisteredClient`。
+
+```java
+    @Bean
+    public RegisteredClientRepository registeredClientRepository() {
+        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("relive-client")
+                .clientSecret("{noop}relive-client")
+                .clientAuthenticationMethods(s -> {
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+                })
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+                .scope("message.read")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)
+                        .requireProofKey(false)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenFormat(OAuth2TokenFormat.REFERENCE)
+                        .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                        .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                        .reuseRefreshTokens(false)
+                        .build())
+                .build();
+
+
+        return new InMemoryRegisteredClientRepository(registeredClient);
+    }
+```
+上述由`RegisteredClient`定义的OAuth2 客户端参数信息说明如下：
+- **id**: 唯一标识
+- **clientId**: 客户端标识符
+- **clientSecret**: 客户端秘密
+- **clientAuthenticationMethods**: 客户端可能使用的身份验证方法。支持的值为`client_secret_basic`、`client_secret_post`、`private_key_jwt`、`client_secret_jwt`和`none`
+- **authorizationGrantTypes**: 客户端可以使用的授权类型。支持的值为`authorization_code`、`implicit`、`password`、`client_credentials`、`refresh_token`和`urn:ietf:params:oauth:grant-type:jwt-bearer`
+- **redirectUris**: 客户端已注册重定向 URI
+- **scopes**: 允许客户端请求的范围
+- **clientSettings**: 客户端的自定义设置
+  - **requireAuthorizationConsent**: 是否需要授权统同意
+  - **requireProofKey**: 当参数为true时，该客户端仅支持PCKE
+- **tokenSettings**: OAuth2 令牌的自定义设置
+  - **accessTokenFormat**: 访问令牌格式，支持OAuth2TokenFormat.SELF_CONTAINED（自包含的令牌使用受保护的、有时间限制的数据结构，例如JWT）；OAuth2TokenFormat.REFERENCE（不透明令牌）
+  - **accessTokenTimeToLive**: access_token有效期
+  - **refreshTokenTimeToLive**: refresh_token有效期
+  - **reuseRefreshTokens**: 是否重用刷新令牌。当参数为true时，刷新令牌后不会重新生成新的refreshToken
+
+
+ProviderSettings包含OAuth2授权服务器的配置设置。它指定了协议端点的URI以及发行人标识。我们将指定发行人标识，协议端点延用默认配置。
+```java
+    @Bean
+    public ProviderSettings providerSettings() {
+        return ProviderSettings.builder()
+                .issuer("http://127.0.0.1:8080")
+                .build();
+    }
+```
+
+OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(HttpSecurity)是一种方便（static）实用工具方法，将默认的OAuth2安全配置应用于HttpSecurity，
+它还提供完全自定义OAuth2授权服务器安全配置的能力，不过在本文中默认配置已经足够使用了。
+
+```java
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        return http.exceptionHandling(exceptions -> exceptions.
+                authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+    }
+```
+
+最后我们将定义Spring Security安全配置类，完善认证功能以保护我们的服务。
+
+```java
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .formLogin(withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    UserDetailsService users() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("password")
+                .roles("ADMIN")
+                .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+```
+
+
+
+### 资源服务器
+
+在本节中，我们将学习如何使用 Spring Security 5 设置 OAuth 2.0 资源服务器。
+
+#### Maven依赖
+```xml
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>oauth2-oidc-sdk</artifactId>
+            <version>9.43.1</version>
+            <scope>runtime</scope>
+        </dependency>
+```
+
+#### 配置
+
+在这里的application.yml中，我们需要添加一个与我们的授权服务器的内省端点相对应的内省 uri 。这是验证不透明令牌的方式：
+
+```yaml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        opaquetoken:
+          client-id: relive-client
+          client-secret: relive-client
+          introspection-uri: http://127.0.0.1:8080/oauth2/introspect
+server:
+  port: 8090
+
+```
+
+在实际中，授权服务器可能由其他公司提供，默认的连接和读取超时可能太短，我们将调整资源服务器连接到授权服务器的超时时间。
+```java
+    @Bean
+    public OpaqueTokenIntrospector introspector(RestTemplateBuilder builder, OAuth2ResourceServerProperties properties) {
+        RestOperations rest = builder
+                .basicAuthentication(properties.getOpaquetoken().getClientId(), properties.getOpaquetoken().getClientSecret())
+                .setConnectTimeout(Duration.ofSeconds(60))
+                .setReadTimeout(Duration.ofSeconds(60))
+                .build();
+
+        return new NimbusOpaqueTokenIntrospector(properties.getOpaquetoken().getIntrospectionUri(), rest);
+    }
+```
+
+接下来我们将定义受保护端点/resource/article访问权限为message.read，访问权限与我们授权服务器为OAuth2客户端配置的`scope`一致，由此在OAuth2客户端申请令牌后才能
+访问此端点。
+```java
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .mvcMatchers("/resource/article").hasAuthority("SCOPE_message.read")
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::opaqueToken);
+        return http.build();
+    }
+
+```
+
+最后我们建立一个 REST 控制器，测试中这将由OAuth2客户端通过HTTP请求访问。
+
+```java
+@RestController
+public class ArticleController {
+
+    @GetMapping("/resource/article")
+    public Map<String, Object> foo(@AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("sub", principal.getAttribute("sub"));
+        result.put("articles", Arrays.asList("Effective Java", "Spring In Action"));
+
+        return result;
+    }
+}
+```
+
+### 测试
+本文我们没有讲述OAuth2客户端的使用，因为OAuth2 客户端配置与之前文章相比并没有任何变化。所以我不想浪费读者阅读的时间花费在此之上，如果您想了解可以参考之前文章或者点击文末链接获取
+源代码。
+
+我们将服务启动后，浏览器访问[http://127.0.0.1:8070/client/test](http://127.0.0.1:8070/client/test)，通过认证成功(记住用户名密码为admin/password)并同意授权后，您将看到如下最终结果：
+
+```json
+{
+	"sub": "admin",
+	"articles": ["Effective Java", "Spring In Action"]
+}
+```
+
+
+### 结论
+在本文中，我们学习了如何配置基于 Spring Security 的资源服务器应用程序来验证不透明令牌。在使用令牌内省会导致 OAuth 2.0 系统内的网络流量增加。为了解决
+这个问题，我们可以允许受保护资源缓存给定令牌的内省请求结果。建议设置短于令牌生命周期的缓存有效期，以便降低令牌被撤回但缓存还有效的可能性。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-opaque-token)获得。
+
+
+
+
+
