@@ -1,0 +1,399 @@
+---
+title: Spring Security OAuth2 内省协议与 JWT 结合使用指南
+date: 2022-12-04 20:14:01
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+## Spring Security OAuth2 内省协议与 JWT 结合使用指南
+
+### 概述
+
+我们已经熟悉两种用于授权服务器和受保护资源之间传递信息的方法：JWT（[JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519)）和令牌内省。
+但实际上，将它们结合起来使用也可以得到很好的效果。尤其在受保护资源要接受来自多个授权服务器的令牌的情况下特别有用。受保护资源可以先解析 JWT，弄清楚
+令牌颁发自哪一个授权服务器，然后向对应的授权服务器发送内省请求以获取详细信息。
+
+这篇文章将介绍如何实现Spring Security 5设置资源服务器实现内省协议与JWT的结合使用，让我们开始实践吧！
+
+### 授权服务器
+在本节中我们将使用 [Spring Authorization Server](https://spring.io/projects/spring-authorization-server) 搭建授权服务器，访问令牌格式为
+JWT（[JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519)）。
+
+#### Maven依赖
+```xml
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-authorization-server</artifactId>
+            <version>0.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+```
+
+#### 配置
+首先我们通过`application.yml`指定服务端口：
+
+```yaml
+server:
+  port: 8080
+```
+
+接下来我们创建`AuthorizationServerConfig`配置类，在此类中我们将创建授权服务所需Bean。下面我们将为授权服务器创建一个OAuth2客户端，`RegisteredClient`
+包含客户端信息，它将由`RegisteredClientRepository`管理。
+
+```java
+    @Bean
+    public RegisteredClientRepository registeredClientRepository() {
+        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("relive-client")
+                .clientSecret("{noop}relive-client")
+                .clientAuthenticationMethods(s -> {
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+                    s.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+                })
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .redirectUri("http://127.0.0.1:8070/login/oauth2/code/messaging-client-authorization-code")
+                .scope("message.read")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)
+                        .requireProofKey(false)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                        .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256)
+                        .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                        .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                        .reuseRefreshTokens(false)
+                        .build())
+                .build();
+
+        return new InMemoryRegisteredClientRepository(registeredClient);
+    }
+
+```
+上述由`RegisteredClient`定义的OAuth2 客户端参数信息说明如下：
+- **id**: 唯一标识
+- **clientId**: 客户端标识符
+- **clientSecret**: 客户端秘密
+- **clientAuthenticationMethods**: 客户端可能使用的身份验证方法。支持的值为`client_secret_basic`、`client_secret_post`、`private_key_jwt`、`client_secret_jwt`和`none`
+- **authorizationGrantTypes**: 客户端可以使用的授权类型。支持的值为`authorization_code`、`implicit`、`password`、`client_credentials`、`refresh_token`和`urn:ietf:params:oauth:grant-type:jwt-bearer`
+- **redirectUris**: 客户端已注册重定向 URI
+- **scopes**: 允许客户端请求的范围
+- **clientSettings**: 客户端的自定义设置
+  - **requireAuthorizationConsent**: 是否需要授权统同意
+  - **requireProofKey**: 当参数为true时，该客户端支持PCKE
+- **tokenSettings**: OAuth2 令牌的自定义设置
+  - **accessTokenFormat**: 访问令牌格式，支持OAuth2TokenFormat.SELF_CONTAINED（自包含的令牌使用受保护的、有时间限制的数据结构，例如JWT）；OAuth2TokenFormat.REFERENCE（不透明令牌）
+  - **accessTokenTimeToLive**: access_token有效期
+  - **refreshTokenTimeToLive**: refresh_token有效期
+  - **reuseRefreshTokens**: 是否重用刷新令牌。当参数为true时，刷新令牌后不会重新生成新的refreshToken
+
+
+`ProviderSettings`包含OAuth2授权服务器的配置设置。它指定了协议端点的URI以及发行人标识。此处*issuer*在下文将由受保护资源解析用于区分授权服务器。
+```java
+    @Bean
+    public ProviderSettings providerSettings() {
+        return ProviderSettings.builder()
+                .issuer("http://127.0.0.1:8080")
+                .build();
+    }
+```
+
+我们将通过`OAuth2AuthorizationServerConfiguration`将OAuth2默认安全配置应用于HttpSecurity，同时对于未认证请求重定向到登录页面。
+
+```java
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        return http.exceptionHandling(exceptions -> exceptions.
+                authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+    }
+```
+
+授权服务器需要其用于JWT令牌的签名密钥，让我们生成一个的 RSA 密钥：
+
+```java
+    @Bean
+    public JWKSource<SecurityContext> jwkSource() {
+        RSAKey rsaKey = Jwks.generateRsa();
+        JWKSet jwkSet = new JWKSet(rsaKey);
+        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+    }
+```
+
+最后我们将定义Spring Security安全配置类，定义Form表单认证方式保护我们的授权服务。
+
+```java
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .formLogin(withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    UserDetailsService users() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("password")
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+```
+
+
+
+
+### 资源服务器
+本节中我们使用 Spring Security 5 设置OAuth2 受保护资源服务。通过自定义实现`AuthenticationManagerResolver`将 JWT 与内省协议结合使用。
+
+
+#### Maven 依赖
+
+```xml
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+            <version>2.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>2.9.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>oauth2-oidc-sdk</artifactId>
+            <version>9.43.1</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.28</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+```
+
+#### 配置
+首先通过`application.yml`配置数据库连接和服务端口。
+
+```yaml
+server:
+  port: 8090
+
+spring:
+  application:
+    name: auth-server
+  datasource:
+    druid:
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/resourceserver-introspection?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: <<username>> # update user
+      password: <<password>> # update password
+
+```
+
+以往我们配置受保护资源服务通常会在`application.yml`中指定 `spring.security.resourceserver.jwt`或`spring.security.resourceserver.opaquetoken`配置，
+Spring Security 会使用`JwtAuthenticationProvider`或`OpaqueTokenAuthenticationProvider` 验证access_token 。
+
+本节中我们将根据`AuthenticationManagerResolver`获取验证access_token规则。由于issuer伴随着已签署的JWT，因此可以使用`JwtIssuerAuthenticationManagerResolver`完成。
+我们将创建 `AuthenticationManagerResolver`的实现`IntrospectiveIssuerJwtAuthenticationManagerResolver` 作为参数构造 `JwtIssuerAuthenticationManagerResolver` 。
+
+```java
+public class IntrospectiveIssuerJwtAuthenticationManagerResolver implements AuthenticationManagerResolver<String> {
+
+    private final Map<String, AuthenticationManager> authenticationManagers = new ConcurrentHashMap<>();
+
+    private final OAuth2IntrospectionService introspectionService;
+
+    private final OpaqueTokenIntrospectorSupport opaqueTokenIntrospectorSupport;
+
+    public IntrospectiveIssuerJwtAuthenticationManagerResolver(OAuth2IntrospectionService introspectionService,
+                                                               OpaqueTokenIntrospectorSupport opaqueTokenIntrospectorSupport) {
+        Assert.notNull(introspectionService, "introspectionService can be not null");
+        Assert.notNull(opaqueTokenIntrospectorSupport, "opaqueTokenIntrospectorSupport can be not null");
+        this.introspectionService = introspectionService;
+        this.opaqueTokenIntrospectorSupport = opaqueTokenIntrospectorSupport;
+    }
+
+    @Override
+    public AuthenticationManager resolve(String issuer) {
+        OAuth2Introspection oAuth2Introspection = this.introspectionService.loadIntrospection(issuer);
+
+        if (oAuth2Introspection != null) {
+            AuthenticationManager authenticationManager = this.authenticationManagers.computeIfAbsent(issuer,
+                    (k) -> {
+                        log.debug("Constructing AuthenticationManager");
+                        OpaqueTokenIntrospector opaqueTokenIntrospector = this.opaqueTokenIntrospectorSupport.fromOAuth2Introspection(oAuth2Introspection);
+                        return new OpaqueTokenAuthenticationProvider(opaqueTokenIntrospector)::authenticate;
+                    });
+            log.debug(LogMessage.format("Resolved AuthenticationManager for issuer '%s'", issuer).toString());
+            return authenticationManager;
+
+        } else {
+            log.debug("Did not resolve AuthenticationManager since issuer is not trusted");
+        }
+        return null;
+    }
+}
+```
+
+`OAuth2IntrospectionService`管理*OAuth2Introspection*并负责持久化。在 OAuth2Introspection 中包含了issuer,clientId,clientSecret,introspectionUri属性信息。
+
+`OpaqueTokenIntrospectorSupport`负责根据 *OAuth2Introspection* 创建 `OpaqueTokenIntrospector`，用于 OAuth 2.0 令牌的内省和验证。 `OpaqueTokenIntrospector`此接口的实现将向 OAuth 2.0 内省端点发出请求以验证令牌并返回其属性。在使用令牌内省会导致 OAuth 2.0 系统内的网络流量增加，
+为了解决这个问题，我们可以允许受保护资源缓存给定令牌的内省请求结果。我们将创建 `OpaqueTokenIntrospector` 的缓存实现 `CachingOpaqueTokenIntrospector`。建议设置短于令牌生命周期的缓存有效期，以便降低令牌被撤回但缓存还有效的可能性。
+
+```java
+public class CachingOpaqueTokenIntrospector implements OpaqueTokenIntrospector {
+    private final Cache cache;
+
+    private final OpaqueTokenIntrospector introspector;
+
+    public CachingOpaqueTokenIntrospector(Cache cache, OpaqueTokenIntrospector introspector) {
+        this.cache = cache;
+        this.introspector = introspector;
+    }
+
+    @Override
+    public OAuth2AuthenticatedPrincipal introspect(String token) {
+        try {
+            return this.cache.get(token,
+                    () -> this.introspector.introspect(token));
+        } catch (Cache.ValueRetrievalException ex) {
+            throw new OAuth2IntrospectionException("Did not validate token from cache.");
+        } catch (OAuth2IntrospectionException e) {
+            if (e instanceof BadOpaqueTokenException) {
+                throw (BadOpaqueTokenException) e;
+            }
+            throw new OAuth2IntrospectionException(e.getMessage());
+        } catch (Exception ex) {
+            log.error("Token introspection failed.", ex);
+            throw new OAuth2IntrospectionException("Token introspection failed.");
+        }
+    }
+}
+```
+
+
+接下来我们创建 `OAuth2IntrospectiveResourceServerAuthorizationConfigurer` 继承 `AbstractHttpConfigurer`，实现我们的定制化配置。
+
+
+```java
+public class OAuth2IntrospectiveResourceServerAuthorizationConfigurer extends AbstractHttpConfigurer<OAuth2IntrospectiveResourceServerAuthorizationConfigurer, HttpSecurity> {
+
+    //...
+
+    @Override
+    public void init(HttpSecurity http) throws Exception {
+        this.validateConfiguration();
+        ApplicationContext applicationContext = http.getSharedObject(ApplicationContext.class);
+        if (this.authenticationManagerResolver == null) {
+            OAuth2IntrospectionService oAuth2IntrospectionService = applicationContext.getBean(OAuth2IntrospectionService.class);
+            OpaqueTokenIntrospectorSupport opaqueTokenIntrospectorSupport = this.getOpaqueTokenIntrospectorSupport(applicationContext);
+
+            IntrospectiveIssuerJwtAuthenticationManagerResolver introspectiveIssuerJwtAuthenticationManagerResolver =
+                    new IntrospectiveIssuerJwtAuthenticationManagerResolver(oAuth2IntrospectionService, opaqueTokenIntrospectorSupport);
+            this.authenticationManagerResolver = introspectiveIssuerJwtAuthenticationManagerResolver;
+        }
+        JwtIssuerAuthenticationManagerResolver jwtIssuerAuthenticationManagerResolver =
+                new JwtIssuerAuthenticationManagerResolver(this.authenticationManagerResolver);
+        http.oauth2ResourceServer(oauth2 -> oauth2
+                .authenticationManagerResolver(jwtIssuerAuthenticationManagerResolver)
+        );
+    }
+
+    //...
+}
+
+```
+
+最后定义Spring Security安全配置类，通过`http.apply()`加载定制化配置`OAuth2IntrospectiveResourceServerAuthorizationConfigurer`。同时定义
+保护端点 /resource/article 权限为 `message.read` 。
+```java
+@Configuration(proxyBeanMethods = false)
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .mvcMatchers("/resource/article").hasAuthority("SCOPE_message.read")
+                        .anyRequest().authenticated()
+                )
+                .apply(new OAuth2IntrospectiveResourceServerAuthorizationConfigurer())
+                .opaqueTokenIntrospectorSupport();
+        return http.build();
+    }
+}
+```
+
+> 篇幅限制本节中涉及代码都取自片段，源码附在文末 [链接](#结论) 中。
+
+
+
+### 测试
+
+Spring Security 构造 OAuth2.0 客户端服务流程文中并没有介绍，如果您对此有疑问，可以参考以前[文章](https://relive27.github.io/blog/persisrence-oauth2-client) 或从文末 [链接](#结论) 中获取源码。
+
+我们将服务启动后，浏览器访问 [http://127.0.0.1:8070/client/test](http://127.0.0.1:8070/client/test)，通过认证(用户名密码为admin/password)并同意授权后，您将看到如下最终结果：
+
+```json
+{
+	"sub": "admin",
+	"articles": ["Effective Java", "Spring In Action"]
+}
+
+```
+
+
+### 结论
+
+与往常一样，本文中使用的源代码可在 [GitHub](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-introspection-with-jwt) 上获得。
