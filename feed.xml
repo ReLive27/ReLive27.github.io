@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sun, 13 Nov 2022 13:50:01 GMT</lastBuildDate>
+      <lastBuildDate>Sun, 04 Dec 2022 20:14:01 GMT</lastBuildDate>
       <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-introspection-with-jwt</guid>
+    <title>Spring Security OAuth2 内省协议与 JWT 结合使用指南</title>
+    <link>/blog/oauth2-introspection-with-jwt</link>
+    undefined
+    <pubDate>Sun, 04 Dec 2022 20:14:01 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/oauth2-opaque-token</guid>
     <title>Spring Security OAuth2 Opaque 令牌的简单使用指南</title>

@@ -49,6 +49,10 @@
   </url>
 
   <url>
+    <loc>/blog/oauth2-introspection-with-jwt</loc>
+  </url>
+
+  <url>
     <loc>/blog/oauth2-jwk-consul-config</loc>
   </url>
 
