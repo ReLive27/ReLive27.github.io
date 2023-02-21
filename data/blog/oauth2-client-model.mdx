@@ -29,7 +29,7 @@ OAuth2客户端凭据授权相比于授权码授权更直接，它通常用于CR
 
 ### 客户端凭据授予流程
 
-当应用程序请求访问令牌以访问其自己的资源时，将使用客户端凭据授权，而不是代表用户。
+当应用程序请求访问令牌以访问其他的资源时，将使用客户端凭据授权，而不是代表用户。
 
 #### 请求参数
 
@@ -165,7 +165,7 @@ SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 #### 配置
 
-授权我们将在application.yml中配置OAuth2授权信息，并指定OAuth2客户端服务端口号：
+我们将在application.yml中配置OAuth2授权信息，并指定OAuth2客户端服务端口号：
 
 ```yaml
 server:
