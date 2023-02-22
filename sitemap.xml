@@ -21,6 +21,10 @@
   </url>
 
   <url>
+    <loc>/blog/archunit-test</loc>
+  </url>
+
+  <url>
     <loc>/blog/custom-oauth2-consent-page</loc>
   </url>
 
@@ -113,7 +117,15 @@
   </url>
 
   <url>
+    <loc>/tags/archunit</loc>
+  </url>
+
+  <url>
     <loc>/tags/java</loc>
+  </url>
+
+  <url>
+    <loc>/tags/junit5</loc>
   </url>
 
   <url>
@@ -121,11 +133,11 @@
   </url>
 
   <url>
-    <loc>/tags/oauth2</loc>
+    <loc>/tags/redis</loc>
   </url>
 
   <url>
-    <loc>/tags/redis</loc>
+    <loc>/tags/oauth2</loc>
   </url>
 
   <url>

@@ -1,0 +1,24 @@
+
+  <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+      <title>ReLive27 Blog</title>
+      <link>/blog</link>
+      <description>ReLive27&#39;s personal blog and website</description>
+      <language>zh-cn</language>
+      <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
+      <webMaster>re_live27@163.com (ReLive27)</webMaster>
+      <lastBuildDate>Wed, 22 Feb 2023 19:40:29 GMT</lastBuildDate>
+      <atom:link href="/tags/junit5/feed.xml" rel="self" type="application/rss+xml"/>
+      
+  <item>
+    <guid>/blog/archunit-test</guid>
+    <title>ArchUnit：轻松测试软件架构</title>
+    <link>/blog/archunit-test</link>
+    undefined
+    <pubDate>Wed, 22 Feb 2023 19:40:29 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>JUnit5</category><category>ArchUnit</category>
+  </item>
+
+    </channel>
+  </rss>
