@@ -1,0 +1,170 @@
+---
+title: ArchUnit：轻松测试软件架构
+date: '2023-02-22 19:40:29'
+tags: ['JUnit5', 'ArchUnit']
+draft: false
+authors: ['default']
+---
+
+### 为什么要测试你的架构？
+当项目变得更大，架构变得更加复杂。每个项目都有开发人员需要遵循的标准规则。
+新开发人员加入，他们可能会在不知情的情况下违反架构约束。如果每个人都在他们认为合适的地方添加新代码，每一个变化都可能对任何其他组件产生不可预见的影响，代码库就会变得混乱。
+
+当然，您可以让一名或多名经验丰富的开发人员担任架构师的角色，他们每周查看一次代码，找出违规行为并加以纠正。
+
+问题是这需要人工干预，有时我们并不能发现所有问题。保护软件架构免遭破坏的最佳方式是采用自动化流程。
+
+在本文中，我将展示解决此类问题的 ArchUnit 框架。您将看到典型的实际示例，以了解如何将此工具集成到您的项目中。
+
+### 什么是 ArchUnit
+[ArchUnit](https://www.archunit.org/) 用于单元测试 Java 项目架构。它可以检查包和类、层和切片之间的依赖关系，检查循环依赖关系等等。通常，开发人员会建立通用模式。
+当有人违反规则时，测试将失败。开发人员将看到有关该问题的信息。它确保代码库保持完整，并且每个人都遵循准则。
+
+### ArchUnit 演示
+
+我们创建一个 Spring Boot 项目，将 ArchUnit maven 依赖项添加到您的pom.xml：
+
+```xml
+<dependency>
+    <groupId>com.tngtech.archunit</groupId>
+    <artifactId>archunit</artifactId>
+    <version>1.0.1</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>com.tngtech.archunit</groupId>
+    <artifactId>archunit-junit5</artifactId>
+    <version>1.0.1</version>
+    <scope>test</scope>
+</dependency>
+```
+
+我们创建一个 `ArchUnitTest.java` 的Java类，我们将把所有的测试都放在那里。
+
+#### 命名检查测试
+
+如果您有多个模块，您可以使用注释 `@AnalyzeClasses` 指出要扫描的包:
+
+```java
+@AnalyzeClasses(packages = "com.relive")
+```
+
+例如，您可能希望 SpringBoot 项目中 Application 类名称应为“SpringBootTestApplication”:
+
+```java
+@ArchTest
+    public static final ArchRule application_class_name_should_be =
+            classes().that().areAnnotatedWith(SpringBootApplication.class)
+                    .should().haveSimpleName("SpringBootTestApplication");
+
+```
+
+您可以检查是否所有 Controller 类都具有后缀“Controller”:
+
+```java
+@ArchTest
+    static ArchRule controllers_suffixed_should_be =
+            classes().that().resideInAPackage("..controller..")
+                    .or().areAnnotatedWith(RestController.class)
+                    .should().haveSimpleNameEndingWith("Controller")
+                    .allowEmptyShould(true);
+```
+
+#### 包位置测试
+
+您可能想检查实体类是否位于“entity”包中:
+
+```java
+@ArchTest
+    static final ArchRule tablename_must_reside_in_a_entity_package =
+            classes().that().areAnnotatedWith(TableName.class)
+                    .should().resideInAPackage("..entity..")
+                    .as("TableName should reside in a package '..entity..'")
+                    .allowEmptyShould(true);
+```
+
+同样，您可以检查配置类是否位于“config”包中:
+
+```java
+@ArchTest
+    static final ArchRule configs_must_reside_in_a_config_package =
+            classes().that().areAnnotatedWith(Configuration.class)
+                    .or().areNotNestedClasses()
+                    .and().areAnnotatedWith(ConfigurationProperties.class)
+                    .should().resideInAPackage("..config..")
+                    .as("Configs should reside in a package '..config..'")
+                    .allowEmptyShould(true);
+
+```
+
+#### 注释测试
+
+所有配置类都应具有 `@Configuration` 或者 `@ConfigurationProperties` 其中之一:
+
+```java
+    @ArchTest
+    static ArchRule configs_should_be_annotated =
+            classes()
+                    .that().resideInAPackage("..config..")
+                    .and().areNotNestedClasses()
+                    .should().beAnnotatedWith(Configuration.class)
+                    .orShould().beAnnotatedWith(ConfigurationProperties.class);
+```
+
+#### 图层测试
+
+所有 Service 层的 Java 类仅可以被 Controller 层访问，Dao 层的 Java 类仅可以被 Service 层访问:
+
+```java
+@ArchTest
+    static ArchRule layer_inspection = layeredArchitecture()
+            .consideringAllDependencies()
+            .layer("Controller").definedBy("..controller..")
+            .layer("Service").definedBy("..service..")
+            .layer("Dao").definedBy("..dao..")
+
+            .whereLayer("Controller").mayNotBeAccessedByAnyLayer()
+            .whereLayer("Service").mayOnlyBeAccessedByLayers("Controller")
+            .whereLayer("Dao").mayOnlyBeAccessedByLayers("Service");
+
+```
+
+#### 测试排除
+
+有时某些类我们不想执行规则，例如 JUnit 测试类。
+
+这可以通过以下方式轻松实现:
+```java
+@AnalyzeClasses(packages = "com.relive", importOptions = {ImportOption.DoNotIncludeTests.class})
+```
+
+
+或者有一个你想忽略的类，因为规则不适用于它。我们可以创建一个自定义规则并导入它，如下所示:
+
+```java
+@AnalyzeClasses(packages = "com.relive", importOptions = {ArchUnitTest.ExcludeControllerImportOption.class})
+public class ArchUnitTest {
+
+
+    static class ExcludeControllerImportOption implements ImportOption {
+        @Override
+        public boolean includes(Location location) {
+            return !location.contains("SomeExcludedControllerClasses");
+        }
+    }
+
+}
+```
+
+### 结论
+
+现在你已经了解如何将 ArchUnit 测试框架集成到您的 Java 项目中。您还熟悉了一些应用中的常用规则。
+
+如果你想了解更多关于 ArchUnit 的规则示例，你可以参考 [ArchUnit 用户指南](https://www.archunit.org/userguide/html/000_Index.html#_introduction) 。
+我想这里可以让你更加深入研究。
+
+与往常一样，本文中使用的源代码可在 [GitHub](https://github.com/ReLive27/spring-boot-sample/tree/main/spring-boot-testing) 上获得。
+
+
+
+
