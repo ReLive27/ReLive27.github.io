@@ -1,0 +1,242 @@
+---
+title: Spring Security 多因素认证（MFA）
+date: 2023-02-26 14:24:01
+tags: ['SpringSecurity']
+draft: false
+authors: ['default']
+---
+
+多因素身份验证是一种提高产品安全性的方法，它通过要求用户提供除用户名和密码之外的第二种形式的身份验证来增加额外的安全层。
+
+在本文中，我们将使用 TOTP（基于时间的一次性密码）作为第二种身份识别形式。此 TOTP 由用户移动设备上的应用程序生成，例如 Google 身份验证器。
+
+> 💡 注意：如果不想读到最后，可以在这里[查看源码](https://github.com/ReLive27/spring-security-sample/tree/master/mfa-login)。喜欢的话别忘了给项目一个star哦！
+
+## 多因素身份验证的工作原理
+
+当用户启用多因素身份验证时，将生成一个密钥并以 QR 码的形式发送给用户，用户将使用身份验证器应用程序对其进行扫描。
+
+登录过程现在需要几个步骤：
+
+1.用户输入用户名和密码。<br />
+2.身份验证服务验证用户名和密码。<br />
+3.用户通过身份验证器应用程序扫描 QR 码。<br />
+4.用户输入验证器应用程序生成的一次性密码。<br />
+5.身份验证服务使用生成的密钥验证一次性密码，并将 JWT 令牌发送给用户。<br />
+
+让我们深入了解实施。
+
+## 一次性密码管理器
+
+我们在 pom.xml 文件中引入[该库](https://github.com/samdjstevens/java-totp) 用于生成密钥并验证一次性密码。
+
+```xml
+<dependency>
+    <groupId>dev.samstevens.totp</groupId>
+    <artifactId>totp-spring-boot-starter</artifactId>
+    <version>1.7.1</version>
+</dependency>
+```
+
+DefaultTotpManager 包装了TOTP库，它有以下操作：
+
+```java
+public class DefaultTotpManager implements MfaAuthenticationManager {
+
+    @Override
+    public String generateSecret() {}
+
+    @Override
+    public String getUriForImage(String label, String secret, String issuer) throws QrGenerationException {}
+
+    @Override
+    public boolean validCode(String secret, String code) {}
+}
+```
+首先，生成密钥，第二，生成密钥的二维码图像 URI，最后，validCode 验证提供的代码是正确的还是错误的代码。
+
+这些方法的实现是直接使用 TOPT 库。
+
+
+## 一次性密码验证流程
+
+提交一次性密码后，`MfaAuthenticationFilter` 将对一次性密码进行验证，我们遵循 Spring Security 的认证架构，
+因此下图看起来应该非常相似 [AbstractAuthenticationProcessingFilter](https://docs.spring.io/spring-security/reference/servlet/authentication/architecture.html#servlet-authentication-abstractprocessingfilter) :
+
+![](../static/images/blogs/mfa-process.png)
+
+**1**: 当用户提交一次性密码时，在实例 `MfaAuthenticationFilter` 通过 `MfaAuthenticationConverter` 从 `HttpServletRequest` 创建一个 `MfaAuthenticationToken` ，这是一种`Authentication`类型。
+`MfaAuthenticationConverter` 将从 SecurityContextHolder.getContext().getAuthentication() 获取 `Authentication`，若 `Authentication` 不为空，执行 setAuthenticated(false) ，在一次性密码验证成功后重新置为true。<br />
+**2**: 接下来 `MfaAuthenticationToken` 将传递给 `AuthenticationManager` 进行验证。`ProviderManager`是最常用的`AuthenticationManager`实现类。 `ProviderManager`将验证委托给一个`AuthenticationProvider`List实例。这里我们
+使用`MfaAuthenticationProvider`执行一次性密码验证。<br />
+**3**: 如果验证失败，则为*Failure*。`AuthenticationFailureHandler`被调用，响应JSON格式的错误信息。<br />
+**4**: 如果验证成功，则为*Success*。`AuthenticationSuccessHandler`被调用，在`MfaAuthenticationTokenContextHolder`设置`MfaTokenContext`上下文信息，包含一次性密码验证成功信息。
+
+## 用户服务
+
+我们实现`UserDetails`接口创建一个`MfaUserDetails`模型增加两个新属性，如下所示：
+```java
+public class MfaUserDetails implements UserDetails {
+    ...
+
+    private final boolean enableMfa;
+    private String secret;
+
+}
+
+```
+第一个是标志，指示是否启用双因素身份验证，第二个是保存密钥的字符串。
+
+
+
+`InMemoryMfaUserDetailsManager`实现` UserDetailsService`为存储在内存中的基于用户名/密码的身份验证提供支持。
+`InMemoryMfaUserDetailsManager` 通过实现 `UserDetailsManager` 接口提供对 `MfaUserDetails` 的管理。如下所示：
+
+```java
+public class InMemoryMfaUserDetailsManager implements UserDetailsManager, UserDetailsPasswordService {
+    private final Map<String, UserDetails> users = new HashMap<>();
+    private AuthenticationManager authenticationManager;
+
+
+    public InMemoryMfaUserDetailsManager() {
+    }
+
+    public InMemoryMfaUserDetailsManager(UserDetails... users) {
+        UserDetails[] userDetails = users;
+        int length = users.length;
+
+        for (int i = 0; i < length; ++i) {
+            UserDetails user = userDetails[i];
+            this.createUser(user);
+        }
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        MfaUserDetails user = (MfaUserDetails) this.users.get(username.toLowerCase());
+        if (user == null) {
+            throw new UsernameNotFoundException(username);
+        } else {
+            return new MfaUserDetails(user.getUsername(), user.getPassword(), user.isEnableMfa(), user.getSecret(), user.isEnabled(), user.isAccountNonExpired(), user.isCredentialsNonExpired(), user.isAccountNonLocked(), user.getAuthorities());
+        }
+    }
+
+    @Override
+    public void createUser(UserDetails user) {
+        Assert.isTrue(!this.userExists(user.getUsername()), "user should not exist");
+        this.users.put(user.getUsername().toLowerCase(), user);
+    }
+
+    @Override
+    public void updateUser(UserDetails user) {
+        Assert.isTrue(this.userExists(user.getUsername()), "user should exist");
+        this.users.put(user.getUsername().toLowerCase(), user);
+    }
+
+    @Override
+    public void deleteUser(String username) {
+        this.users.remove(username.toLowerCase());
+    }
+
+    ...
+}
+```
+
+
+## 登录流程
+
+本节我们启用 Spring Security 的基于表单的登录。
+
+```java
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
+                .formLogin();
+
+        //...
+
+        return http.build();
+    }
+```
+
+
+
+接下来我们需要更改表单登录的默认`AuthenticationSuccessHandler`实现类，我们创建`MfaAuthenticationSuccessHandler`实现`AuthenticationSuccessHandler`。
+
+```java
+public class MfaAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    ...
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        UsernamePasswordAuthenticationToken authenticationToken = (UsernamePasswordAuthenticationToken) authentication;
+        MfaUserDetails userDetails = (MfaUserDetails) authenticationToken.getPrincipal();
+        if (userDetails.isEnableMfa()) {
+
+            if (!StringUtils.hasText(userDetails.getSecret())) {
+                String secret = mfaAuthenticationManager.generateSecret();
+                userDetails.setSecret(secret);
+                this.userDetailsManager.updateUser(userDetails);
+                String uriForImage;
+                try {
+                    uriForImage = mfaAuthenticationManager.getUriForImage(userDetails.getUsername(), secret, "http://127.0.0.1:8080");
+                } catch (Exception e) {
+                    log.error("Error getting QR code image", e);
+                    MfaAuthenticationResponse mfaAuthenticationResponse = MfaAuthenticationResponse.unauthenticated("Error getting QR code image", "bind", HttpStatus.BAD_REQUEST, null);
+                    this.sendMfaResponse(request, response, mfaAuthenticationResponse);
+                    return;
+                }
+                MfaAuthenticationResponse mfaAuthenticationResponse = MfaAuthenticationResponse.unauthenticated("The current account is not bound to the token app", "bind", HttpStatus.OK, uriForImage);
+                this.sendMfaResponse(request, response, mfaAuthenticationResponse);
+                return;
+            }
+            MfaTokenContext mfaTokenContext = MfaAuthenticationTokenContextHolder.getMfaTokenContext();
+            if (mfaTokenContext == null || !mfaTokenContext.isMfa()) {
+                MfaAuthenticationResponse mfaAuthenticationResponse = MfaAuthenticationResponse.unauthenticated("dynamic password error", "enable", HttpStatus.OK, null);
+                this.sendMfaResponse(request, response, mfaAuthenticationResponse);
+                return;
+            }
+        }
+
+        Jwt jwt = this.tokenGenerator.generate(authentication);
+        MfaAuthenticationResponse mfaAuthenticationResponse = MfaAuthenticationResponse.authenticated(userDetails.isEnableMfa() ? "enable" : "disabled", jwt.getTokenValue());
+        this.sendMfaResponse(request, response, mfaAuthenticationResponse);
+    }
+
+    ...
+}
+```
+
+此过程中重要几个步骤：
+1. 用户是否启用多因素认证，若未启用则直接生成JWT格式令牌。
+2. 用户已经启用多因素认证，判断当前用户是否已生成密钥，若未生成密钥，则创建64位密钥，并响应 QR 码提供给用户进行绑定。
+3. 从`MfaAuthenticationTokenContextHolder`获取`MfaTokenContext`上下文信息，判断一次性密码是否验证通过。
+4. 一次性密码验证通过，最终生成JWT格式令牌。
+
+最终 Spring Security 安全配置为：
+
+```java
+    @Bean
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
+                .formLogin().successHandler(MfaConfigurerUtils.getAuthenticationSuccessHandler(http));
+
+                ...
+
+        return http.build();
+    }
+```
+
+
+## 演示
+
+下面是我们的最终实现目标，前端工程使用 Vue 实现，您[可以从这里](https://github.com/ReLive27/spring-security-mfa-vue-template)找到完整的前端源代码。
+
+![](../static/images/blogs/mfa-demo.gif)
+
+## 结论
+
+多因素身份验证通过添加额外的安全层来提高安全级别，从而增加信任并使攻击者更难访问您的数据。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-sample/tree/master/mfa-login)获得。
