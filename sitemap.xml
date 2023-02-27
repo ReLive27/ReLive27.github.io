@@ -97,6 +97,10 @@
   </url>
 
   <url>
+    <loc>/blog/spring-security-mfa</loc>
+  </url>
+
+  <url>
     <loc>/blog/spring-security-oauth2-jwt</loc>
   </url>
 
@@ -129,11 +133,11 @@
   </url>
 
   <url>
-    <loc>/tags/mybatis</loc>
+    <loc>/tags/oauth2</loc>
   </url>
 
   <url>
-    <loc>/tags/oauth2</loc>
+    <loc>/tags/mybatis</loc>
   </url>
 
   <url>

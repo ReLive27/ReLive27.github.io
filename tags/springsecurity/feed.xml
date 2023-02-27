@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sun, 04 Dec 2022 20:14:01 GMT</lastBuildDate>
+      <lastBuildDate>Sun, 26 Feb 2023 14:24:01 GMT</lastBuildDate>
       <atom:link href="/tags/springsecurity/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/spring-security-mfa</guid>
+    <title>Spring Security 多因素认证（MFA）</title>
+    <link>/blog/spring-security-mfa</link>
+    undefined
+    <pubDate>Sun, 26 Feb 2023 14:24:01 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category>
+  </item>
+
   <item>
     <guid>/blog/oauth2-introspection-with-jwt</guid>
     <title>Spring Security OAuth2 内省协议与 JWT 结合使用指南</title>
