@@ -367,7 +367,7 @@ public class PkceClientController {
 
 本节中，我们将使用Spring Security搭建一个资源服务器。
 
-### maven
+#### maven
 
 ```xml
 <dependency>
@@ -389,7 +389,7 @@ public class PkceClientController {
 
 #### 配置
 
-通过application.yml配置资源服务器服务端口8070，并指定授权服务器jwk uri，用于获取公钥信息验证token令牌：
+通过application.yml配置资源服务器服务端口8070，并指定授权服务器jwk uri，用于获取公钥信息验证token：
 
 ```yaml
 server:
