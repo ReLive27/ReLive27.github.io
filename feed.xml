@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sun, 26 Feb 2023 14:24:01 GMT</lastBuildDate>
+      <lastBuildDate>Mon, 06 Mar 2023 20:26:01 GMT</lastBuildDate>
       <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/pagehelper-affects-sql-exception</guid>
+    <title>PageHelper 使用不当引发的 SQL 出现两个 limit</title>
+    <link>/blog/pagehelper-affects-sql-exception</link>
+    undefined
+    <pubDate>Mon, 06 Mar 2023 20:26:01 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>Mybatis</category><category>PageHelper</category>
+  </item>
+
   <item>
     <guid>/blog/spring-security-mfa</guid>
     <title>Spring Security 多因素认证（MFA）</title>

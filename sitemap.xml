@@ -77,6 +77,10 @@
   </url>
 
   <url>
+    <loc>/blog/pagehelper-affects-sql-exception</loc>
+  </url>
+
+  <url>
     <loc>/blog/persisrence-oauth2-client</loc>
   </url>
 
@@ -137,11 +141,15 @@
   </url>
 
   <url>
-    <loc>/tags/redis</loc>
+    <loc>/tags/oauth2</loc>
   </url>
 
   <url>
-    <loc>/tags/oauth2</loc>
+    <loc>/tags/pagehelper</loc>
+  </url>
+
+  <url>
+    <loc>/tags/redis</loc>
   </url>
 
   <url>

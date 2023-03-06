@@ -8,7 +8,7 @@
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
       <lastBuildDate>Mon, 06 Mar 2023 20:26:01 GMT</lastBuildDate>
-      <atom:link href="/tags/mybatis/feed.xml" rel="self" type="application/rss+xml"/>
+      <atom:link href="/tags/pagehelper/feed.xml" rel="self" type="application/rss+xml"/>
       
   <item>
     <guid>/blog/pagehelper-affects-sql-exception</guid>
@@ -18,16 +18,6 @@
     <pubDate>Mon, 06 Mar 2023 20:26:01 GMT</pubDate>
     <author>re_live27@163.com (ReLive27)</author>
     <category>Mybatis</category><category>PageHelper</category>
-  </item>
-
-  <item>
-    <guid>/blog/mybatis-mysql-keyword</guid>
-    <title>Mybatis-plus遇到MySQL关键字如何解决</title>
-    <link>/blog/mybatis-mysql-keyword</link>
-    undefined
-    <pubDate>Wed, 18 May 2022 17:33:52 GMT</pubDate>
-    <author>re_live27@163.com (ReLive27)</author>
-    <category>mybatis</category><category>java</category>
   </item>
 
     </channel>
