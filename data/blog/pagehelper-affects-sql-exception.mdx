@@ -1,0 +1,68 @@
+---
+title: PageHelper 使用不当引发的 SQL 出现两个 limit
+date: 2023-03-06 20:26:01
+tags: ['Mybatis', 'PageHelper']
+draft: false
+authors: ['default']
+---
+
+## 问题描述
+记录一次功能测试中发现的问题，我们发现页面一部分接口有时报错，通过查看后台日志，发现出现大量 SQL 异常错误，SQL 语句包含多个 limit，我们直接排除了人为编写多个 SQL，
+因为一般不会犯这种错误，首先我们想到是不是 Mybatis 拦截器有人改动造成的，但是发现并没有任何问题。最终通过排查发现是由 PageHelper 不规范使用
+造成的，并且发现工程中存在多处 PageHelper 使用不当。
+
+PageHelper.startPage(pageStart, pageSize) 与 Mapper 接口之间存在业务逻辑，当业务逻辑出现异常没有执行后续的查询，此时 PageHelper 的分页设置绑定在该线程的ThreadLocal里，
+新的SQL查询恰好使用了该线程，则自动使用分页查询。
+
+![](../static/images/blogs/pagehelper-sql-exception.png)
+
+## 复现问题
+
+我们创建一个 `UserService` 类中包含以下方法:
+
+```java
+    public PageInfo getUserList() {
+        PageHelper.startPage(1, 2);
+
+        //模拟 PageHelper.startPage() 与 Mapper 之间抛出异常
+        int i = 1 / 0;
+
+        List<User> users = userMapper.selectList(null);
+        return new PageInfo(users);
+    }
+
+    public User getUser() {
+        return userMapper.selectOne(new LambdaQueryWrapper<User>().last("limit 1"));
+    }
+```
+
+编写测试类:
+
+```java
+@SpringBootTest
+@Sql("/user.sql")
+public class PageHelperTest {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 测试当PageHelper使用不当引起多个limit关键字的SQL错误
+     */
+    @Test
+    public void badSqlGrammarExceptionWhenWrongUseOfPagehelper() {
+        Assertions.assertThrows(ArithmeticException.class, () -> userService.getUserList());
+        Assertions.assertThrows(BadSqlGrammarException.class, () -> userService.getUser());
+    }
+}
+```
+
+## 解决方法
+1. PageHelper.startPage() 之后紧接着调用select查询。
+2. 在finally 中调用 PageHelper.clearPage()
+
+
+## 结论
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-boot-sample/tree/main/spring-boot-persistence/mybatis/src/test/java/com/relive/pagehelper)获得。
+
