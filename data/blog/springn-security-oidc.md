@@ -39,7 +39,7 @@ OpenID Connect 流程看起来与 OAuth 相同。主要区别是，在授权请�
 
 ### 使用Spring Authorization Server搭建身份提供服务(IdP)
 
-本节中我们将使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server)搭建身份提供服务，并通过`OAuth2TokenCustomizer`实现自定义ID Token。
+本节中我们将使用[Spring Authorization Server](https://spring.io/projects/spring-authorization-server) 搭建身份提供服务，并通过`OAuth2TokenCustomizer` 实现自定义ID Token。
 
 #### maven 依赖项
 
@@ -112,12 +112,12 @@ server:
 
 我们正在配置的属性是：
 
-- clientId —— Spring Security将使用它来识别哪个客户端正在尝试访问资源
+- clientId —— 身份提供服务将使用它来识别哪个客户端正在尝试访问资源
 - clientSecret——客户端和服务器都知道的一个秘密，它提供了两者之间的信任
 - clientAuthenticationMethod——客户端验证方式，在我们的例子中，我们将支持basic和post身份验证方式
-- authorizationGrantType——授权类型，允许客户端生成授权码和刷新令牌
+- authorizationGrantType——授权类型，支持授权码和刷新令牌
 - redirectUri —— 重定向 URI，客户端将在基于重定向的流程中使用它
-- scope——此参数定义客户端可能拥有的权限。在我们的例子中，我们将拥有所需的*OidcScopes.OPENID*和用来获取额外的*身份*信息*OidcScopes.PROFILE*，*OidcScopes.EMAIL*。
+- scope——此参数定义客户端可能拥有的权限。在我们的例子中，我们将拥有所需的`openid`和用来获取额外的*身份*信息`profile`，`email`。
 
 <br />
 
@@ -133,7 +133,7 @@ OpenID Connect 使用一个特殊的权限范围值 openid 来控制对 UserInfo
 | address    | address,是一个 JSON 对象、包含 formatted、street_address、locality、region、postal_code、country |
 | phone      | phone_number、phone_number_verified                          |
 
-让我们根据上述规范定义*OidcUserInfoService*，用于扩展/userinfo用户信息端点响应：
+让我们根据上述规范定义`OidcUserInfoService`，用于扩展/userinfo用户信息端点响应：
 
 ```java
 public class OidcUserInfoService {
@@ -179,7 +179,7 @@ public class OidcUserInfoService {
 
 <br />
 
-接下来，我们将配置一个 bean 以应用默认 OAuth 安全性。使用上述*OidcUserInfoService*配置OIDC中UserInfoMapper；oauth2ResourceServer()配置资源服务器使用JWT验证，用来保护Spring Security 提供的/userinfo端点；对于未认证请求我们会将它重定向到/login 登录页：
+接下来，我们将配置一个 bean 以应用默认 OAuth 安全性。使用上述`OidcUserInfoService`配置OIDC中UserInfoMapper；oauth2ResourceServer()配置资源服务器使用JWT验证，用来保护身份提供服务的/userinfo端点；对于未认证请求我们会将它重定向到/login 登录页：
 
 > 注意：有时“授权服务器”和“资源服务器”是同一台服务器。
 
@@ -272,7 +272,7 @@ static class KeyGeneratorUtils {
 
 <br />
 
-然后我们将使用带有@*EnableWebSecurity*注释的配置类启用 Spring Web 安全模块：
+然后我们将使用带有`@EnableWebSecurity`注释的配置类启用 Spring Web 安全模块：
 
 ```java
 @Configuration(proxyBeanMethods = false)
@@ -294,7 +294,7 @@ public class DefaultSecurityConfig {
 
 ```
 
-这里我们使用Form表单认证方式，所以我们还需要为登录认证提供用户名和密码：
+这里我们使用Form认证方式，所以我们还需要为登录认证提供用户名和密码：
 
 ```java
     @Bean
@@ -386,7 +386,7 @@ public class IdTokenCustomizerConfig {
 
 #### 相关数据库表结构
 
-这是我们本文中RP服务使用的相关数据库表，涉及相关创建表及初始化数据的SQL语句可以[从这里](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login/rp/src/main/resources/db/migration)获取。
+这是我们本文中RP服务使用的相关数据库表，涉及相关创建表及初始化数据的SQL语句可以[从这里](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login/rp/src/main/resources/db/migration) 获取。
 
 ![](../static/images/blogs/spring-oidc-sql-model.png)
 
@@ -394,7 +394,7 @@ public class IdTokenCustomizerConfig {
 
 #### 配置
 
-首先我们通过application.yml文件中配置服务端口和数据库连接信息：
+首先我们通过`application.yml`文件中配置服务端口和数据库连接信息：
 
 ```yaml
 server:
@@ -440,7 +440,7 @@ spring:
 
 <br />
 
-下面我们将配置OAuth2客户端基于MySql数据库的存储方式，你也可以从[Spring Security 持久化OAuth2客户端](https://relive27.github.io/blog/persisrence-oauth2-client)了解详细信息。
+下面我们将配置OAuth2客户端基于MySql数据库的存储方式，你也可以从[Spring Security 持久化OAuth2客户端](https://relive27.github.io/blog/persisrence-oauth2-client) 了解详细信息。
 
 ```java
     /**
@@ -485,7 +485,7 @@ spring:
 
 <br />
 
-我们不在使用基于内存的用户名密码，在初始化数据库时我们已经将用户名密码添加到user表中，所以我们需要实现*UserDetailsService*接口用于Form认证时获取用户信息：
+我们不在使用基于内存的用户名密码，在初始化数据库时我们已经将用户名密码添加到user表中，所以我们需要实现`UserDetailsService`接口用于Form认证时获取用户信息：
 
 ```java
 @RequiredArgsConstructor
@@ -510,11 +510,11 @@ public class JdbcUserDetailsService implements UserDetailsService {
 
 ```
 
-这里*UserRepository*继承了*JpaRepository*，提供user表的CRUD，详细代码可以在文末链接中获取。
+这里`UserRepository`继承了`JpaRepository`，提供user表的CRUD，详细代码可以在文末链接中获取。
 
 <br />
 
-现在我们将要解决如何将IdP服务用户角色映射为RP服务已有的角色，在[前面文章](https://relive27.github.io/blog/oauth2-login)中曾使用`GrantedAuthoritiesMapper`映射角色。在本文中我们将使用*OAuth2UserService*添加角色映射策略，它与`GrantedAuthoritiesMapper`相比更加灵活:
+现在我们将要解决如何将IdP服务用户角色映射为RP服务已有的角色，在[前面文章](https://relive27.github.io/blog/oauth2-login) 中曾使用`GrantedAuthoritiesMapper`映射角色。在本文中我们将使用`OAuth2UserService`添加角色映射策略，它与`GrantedAuthoritiesMapper`相比更加灵活:
 
 ```java
 public class OidcRoleMappingUserService implements OAuth2UserService<OidcUserRequest, OidcUser> {
@@ -543,7 +543,7 @@ public class OidcRoleMappingUserService implements OAuth2UserService<OidcUserReq
 
 
 
-最后我们将创建HomeController，通过控制页面中展示内容使测试效果视觉上更加显著，我们将根据角色展示不同信息，使用[thymeleaf](https://www.thymeleaf.org/)模版引擎渲染。
+最后我们将创建`HomeController`，通过控制页面中展示内容使测试效果视觉上更加显著，我们将根据角色展示不同信息，使用[thymeleaf](https://www.thymeleaf.org/) 模版引擎渲染。
 
 ```java
 @Controller
@@ -568,8 +568,8 @@ public class HomeController {
 
 
 
-完成配置后，我们可以访问 http://127.0.0.1:8070/login 进行测试。
+完成配置后，我们可以访问 http://127.0.0.1:8070/home 进行测试。
 
 ### 结论
 
-在本文中分享了Spring Security对于OpenID Connect的支持。与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login)获得。
+在本文中分享了Spring Security对于OpenID Connect的支持。与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oidc-login) 获得。
