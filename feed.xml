@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Mon, 06 Mar 2023 20:26:01 GMT</lastBuildDate>
+      <lastBuildDate>Fri, 19 Jan 2024 15:14:29 GMT</lastBuildDate>
       <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-custom-consent-page-with-vue</guid>
+    <title>使用 Vue.js 构建 OAuth2 授权同意页面</title>
+    <link>/blog/oauth2-custom-consent-page-with-vue</link>
+    undefined
+    <pubDate>Fri, 19 Jan 2024 15:14:29 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/pagehelper-affects-sql-exception</guid>
     <title>PageHelper 使用不当引发的 SQL 出现两个 limit</title>

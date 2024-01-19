@@ -53,6 +53,10 @@
   </url>
 
   <url>
+    <loc>/blog/oauth2-custom-consent-page-with-vue</loc>
+  </url>
+
+  <url>
     <loc>/blog/oauth2-introspection-with-jwt</loc>
   </url>
 
