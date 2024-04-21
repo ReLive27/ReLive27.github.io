@@ -12,18 +12,18 @@ Spring AI 不仅提供了与 OpenAI 进行API交互，同样支持与 Ollama 进
 
 ## Docker环境安装Ollama
 1.获取Docker镜像。
-```
+```shell
 docker pull ollama/ollama
 ```
 
 2.在 Docker 容器内运行 Ollama。
-```
+```shell
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
 3.现在您可以在容器内运行像 Llama 2 这样的模型。
 
-```
+```shell
 docker exec -it ollama ollama run llama2
 ```
 [更多模型可以在Ollama 库](https://ollama.ai/library)中找到。
@@ -31,7 +31,7 @@ docker exec -it ollama ollama run llama2
 ## 创建 Spring Boot 项目
 
 首先引入相关依赖。
-```
+```xml
 <dependencies>
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -61,7 +61,7 @@ docker exec -it ollama ollama run llama2
 
 在 application.yml 中配置 Ollama 地址和使用的模型。
 
-```
+```yml
 spring:
   ai:
     ollama:
@@ -73,7 +73,7 @@ spring:
 
 这里我们填写一个提示来测试下，`ChatClient`将调用Ollama的API接口。
 
-```
+```java
 @GetMapping("/top/fiction")
 public String topCodeLanguage() {
     String message = "2023最受欢迎小说是什么";
@@ -83,7 +83,7 @@ public String topCodeLanguage() {
 
 我们稍微对上面的接口做些更改，我首先将一个路径变量放入请求，这样我们就可以将年份模板化。`PromptTemplate`旨在帮助创建结构化提示，我们通过add()方法插入动态内容，render()会渲染为最终字符串格式。
 
-```
+```java
 @GetMapping("/top/fiction/{year}")
 public String topCodeLanguageByYear(@PathVariable("year") Integer year) {
     String message = "{year}最受欢迎小说是什么";

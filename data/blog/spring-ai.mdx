@@ -14,7 +14,7 @@ authors: ['default']
 
 首先我们创建一个全新的Spring项目，引入Spring AI依赖。
 
-```
+```xml
 <dependencies>
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -41,9 +41,9 @@ authors: ['default']
 </repositories>
 ```
 
-在 application.yml 中设置OpenAI的API Key。具体如何获取可以参考[如何获取Api Key](https://chatgpt.cn.obiscr.com/blog/posts/2023/How-to-get-api-key/)。
+在 application.yml 中设置OpenAI的API Key。具体如何获取可以参考 [如何获取Api Key](https://chatgpt.cn.obiscr.com/blog/posts/2023/How-to-get-api-key/)。
 
-```
+```yml
 spring:
   ai:
     openai:
@@ -52,7 +52,7 @@ spring:
 
 添加完成OpenAI API Key 我们就可以使用`ChatClient`与AI模型进行交互了，`ChatClient`简化了与各种人工智能模型的连接，针对各模型有自己的实现类。我们先看下基础用法，这里我创建一个接口，要求OpenAI生成一个答案给我，此时`ChatClient`将调用OpenAI独有的API接口向OpenAI发起请求，我们可以通过测试来看看OpenAI给我们的答案是什么吧。
 
-```
+```java
 @GetMapping("/top/code/language")
 public String topCodeLanguage() {
     String message = "2023最受欢迎编程语言是什么";
@@ -64,7 +64,7 @@ public String topCodeLanguage() {
 
 我们稍微对上面的接口做些更改，我首先将一个路径变量放入请求，这样我们就可以将年份模板化。`PromptTemplate`旨在帮助创建结构化提示，我们通过add()方法插入动态内容，render()会渲染为最终字符串格式。
 
-```
+```java
 @GetMapping("/top/code/language/{year}")
 public String topCodeLanguageByYear(@PathVariable("year") Integer year) {
     String message = "{year}最受欢迎编程语言是什么";
@@ -78,7 +78,7 @@ public String topCodeLanguageByYear(@PathVariable("year") Integer year) {
 
 也许我们不希望它返回的是一个字符串，我们希望它作为一个对象，所以让我们看看如何做到这一点。首先我们创建一个`TopLanguage`类。
 
-```
+```java
 public class TopLanguage {
     private Integer ranking;
     private String languageName;
@@ -87,7 +87,7 @@ public class TopLanguage {
 ```
 
 然后我们先创建一个输出解析器，`BeanOutputParser`是指定 Java 类转换为 JSON 模式，然后，AI 模型的 JSON 输出被反序列化为 Java 对象。同样我们通过占位符{format}插入动态内容。
-```
+```java
 @GetMapping("/top/code/language/{year}/json")
 public TopLanguage topCodeLanguageByYearForFormat(@PathVariable("year") Integer year) {
     BeanOutputParser<TopLanguage> parser = new BeanOutputParser<>(TopLanguage.class);
