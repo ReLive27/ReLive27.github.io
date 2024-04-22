@@ -21,6 +21,16 @@
   </item>
 
   <item>
+    <guid>/blog/spring-ai</guid>
+    <title>Spring AI</title>
+    <link>/blog/spring-ai</link>
+    undefined
+    <pubDate>Sun, 21 Apr 2024 12:13:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringBoot</category><category>AI</category>
+  </item>
+
+  <item>
     <guid>/blog/oauth2-custom-consent-page-with-vue</guid>
     <title>使用 Vue.js 构建 OAuth2 授权同意页面</title>
     <link>/blog/oauth2-custom-consent-page-with-vue</link>

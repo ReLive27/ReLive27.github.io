@@ -21,6 +21,16 @@
   </item>
 
   <item>
+    <guid>/blog/spring-ai</guid>
+    <title>Spring AI</title>
+    <link>/blog/spring-ai</link>
+    undefined
+    <pubDate>Sun, 21 Apr 2024 12:13:37 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringBoot</category><category>AI</category>
+  </item>
+
+  <item>
     <guid>/blog/spring-start-event</guid>
     <title>SpringBoot启动完成前后执行某个方法</title>
     <link>/blog/spring-start-event</link>
