@@ -1,6 +1,6 @@
 ---
 title: Spring AI 和 Ollama
-date: '2024-04-21 19:20:01'
+date: 2024-04-21 19:20:01
 tags: ['SpringBoot', 'AI']
 draft: false
 authors: ['default']
@@ -12,21 +12,21 @@ Spring AI 不仅提供了与 OpenAI 进行API交互，同样支持与 Ollama 进
 
 ## Docker环境安装Ollama
 1.获取Docker镜像。
-```shell
+```sh
 docker pull ollama/ollama
 ```
 
 2.在 Docker 容器内运行 Ollama。
-```shell
+```sh
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
 3.现在您可以在容器内运行像 Llama 2 这样的模型。
 
-```shell
+```sh
 docker exec -it ollama ollama run llama2
 ```
-[更多模型可以在Ollama 库](https://ollama.ai/library)中找到。
+[更多模型可以在Ollama 库](https://ollama.ai/library) 中找到。
 
 ## 创建 Spring Boot 项目
 
@@ -96,4 +96,4 @@ public String topCodeLanguageByYear(@PathVariable("year") Integer year) {
 
 ## 结论
 
-我们已经完成了Spring AI 与Ollama的基本示例，与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-boot-sample/tree/main/spring-ai)获得。
+我们已经完成了Spring AI 与Ollama的基本示例，与往常一样，本文中使用的源代码可 [在 GitHub 上](https://github.com/ReLive27/spring-boot-sample/tree/main/spring-ai) 获得。
