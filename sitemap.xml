@@ -93,6 +93,10 @@
   </url>
 
   <url>
+    <loc>/blog/spring-ai-ollama</loc>
+  </url>
+
+  <url>
     <loc>/blog/spring-gateway-csrf</loc>
   </url>
 
@@ -126,6 +130,10 @@
 
   <url>
     <loc>/blog/springn-security-oidc</loc>
+  </url>
+
+  <url>
+    <loc>/tags/ai</loc>
   </url>
 
   <url>
