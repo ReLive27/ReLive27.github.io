@@ -1,0 +1,109 @@
+---
+title: Spring AI
+date: 2024-04-21 12:13:37
+tags: ['SpringBoot', 'AI']
+draft: false
+authors: ['default']
+---
+
+近年来，人工智能技术的迅猛发展改变了我们对科技的看法，并在各个领域引发了巨大的变革。每个人都希望在自己的项目上能够使用人工智能。Spring 框架提供了一个名为 “Spring AI” 的项目，Spring AI 项目旨在简化包含人工智能功能的应用程序的开发，避免不必要的复杂性。目前还处于预测试版，也就意味着将来可能发生变化，不过事实上现在已经可以和OpenAI、Azure OpenAI、Hugging Face、Ollama进行API交互。
+
+让我们看看如何在 Spring 应用程序中实现生成式AI吧。
+
+## 创建一个Spring项目
+
+首先我们创建一个全新的Spring项目，引入Spring AI依赖。
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>3.2.0</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+        <version>0.8.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+<repositories>
+    <repository>
+        <id>spring-snapshots</id>
+        <name>Spring Snapshots</name>
+        <url>https://repo.spring.io/snapshot</url>
+        <releases>
+            <enabled>false</enabled>
+        </releases>
+    </repository>
+</repositories>
+```
+
+在 application.yml 中设置OpenAI的API Key。具体如何获取可以参考 [如何获取Api Key](https://chatgpt.cn.obiscr.com/blog/posts/2023/How-to-get-api-key/) 。
+
+```yml
+spring:
+  ai:
+    openai:
+      api-key: {OPENAI_API_KEY}
+```
+
+添加完成OpenAI API Key 我们就可以使用`ChatClient`与AI模型进行交互了，`ChatClient`简化了与各种人工智能模型的连接，针对各模型有自己的实现类。我们先看下基础用法，这里我创建一个接口，要求OpenAI生成一个答案给我，此时`ChatClient`将调用OpenAI独有的API接口向OpenAI发起请求，我们可以通过测试来看看OpenAI给我们的答案是什么吧。
+
+```java
+@GetMapping("/top/code/language")
+public String topCodeLanguage() {
+    String message = "2023最受欢迎编程语言是什么";
+    return chatClient.generate(message);
+}
+```
+
+### 提示模板
+
+我们稍微对上面的接口做些更改，我首先将一个路径变量放入请求，这样我们就可以将年份模板化。`PromptTemplate`旨在帮助创建结构化提示，我们通过add()方法插入动态内容，render()会渲染为最终字符串格式。
+
+```java
+@GetMapping("/top/code/language/{year}")
+public String topCodeLanguageByYear(@PathVariable("year") Integer year) {
+    String message = "{year}最受欢迎编程语言是什么";
+    PromptTemplate promptTemplate = new PromptTemplate(message);
+    promptTemplate.add("year", year);
+    return chatClient.generate(promptTemplate.render());
+}
+```
+
+### 输出解析器
+
+也许我们不希望它返回的是一个字符串，我们希望它作为一个对象，所以让我们看看如何做到这一点。首先我们创建一个`TopLanguage`类。
+
+```java
+public class TopLanguage {
+    private Integer ranking;
+    private String languageName;
+    private String introduction;
+}
+```
+
+然后我们先创建一个输出解析器，`BeanOutputParser`是指定 Java 类转换为 JSON 模式，然后，AI 模型的 JSON 输出被反序列化为 Java 对象。同样我们通过占位符`{format}`插入动态内容。
+```java
+@GetMapping("/top/code/language/{year}/json")
+public TopLanguage topCodeLanguageByYearForFormat(@PathVariable("year") Integer year) {
+    BeanOutputParser<TopLanguage> parser = new BeanOutputParser<>(TopLanguage.class);
+    String message = "What is the most popular programming language in {year}? {format}";
+    PromptTemplate promptTemplate = new PromptTemplate(message);
+    promptTemplate.add("year", year);
+    promptTemplate.add("format", parser.getFormat());
+    promptTemplate.setOutputParser(parser);
+
+    log.info("FORMAT STRING: " + parser.getFormat());
+
+    Prompt prompt = promptTemplate.create();
+    ChatResponse chatResponse = chatClient.generate(prompt);
+    String content = chatResponse.getGeneration().getContent();
+    return parser.parse(content);
+}
+```
+
+## 结论
+我们已经完成了Spring AI的基本示例，与往常一样，本文中使用的源代码可 [在 GitHub 上](https://github.com/ReLive27/spring-boot-sample/tree/main/spring-ai) 获得。
