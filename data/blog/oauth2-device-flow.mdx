@@ -1,0 +1,281 @@
+---
+title: OAuth2.0设备授权流程
+date: '2024-10-04 20:32:29'
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+
+OAuth2.0设备授权流程（Device Authorization Grant）是一种为缺乏输入能力的设备（例如智能电视、游戏机、物联网设备等）设计的授权模式。这些设备通常不具备复杂的键盘或指定输入方式，无法直接进行OAuth2.0标准的交互授权。设备授权的设计流程目标是让用户能够在另一个具备完整输入能力的设备上完成授权操作，从而使不具备输入能力的设备也能获取访问权限保护。
+
+本文将详细介绍 OAuth2.0 设备授权流程的工作原理、步骤及其实现方式。
+
+
+
+## 什么是 OAuth 2.0 设备授权流程？
+
+OAuth 2.0 是一种授权框架，允许应用程序安全地访问用户的资源而无需暴露用户的凭据。设备授权流程专门为输入受限的设备设计，比如智能电视、IoT 设备等。
+
+该流程的核心理念是将用户认证的输入部分迁移到具有更多输入能力的设备上（如手机或电脑），而受限设备只需要展示一个用户代码并等待用户在另一设备上进行授权。
+
+## OAuth 2.0 设备授权流程的步骤
+
+设备授权流程大致分为以下几个步骤：
+
+1.  **设备请求授权**：设备向授权服务器发送请求，获取一个设备代码和用户代码。
+2.  **用户在另一设备上授权**：设备将用户代码展示给用户，用户在另一设备上输入该代码并完成授权。
+3.  **设备轮询授权服务器**：设备定期向授权服务器查询用户是否完成了授权。
+4.  **获取访问令牌**：授权成功后，设备获取访问令牌，从而可以访问受保护的资源。
+
+
+![](../static/images/blogs/device-flow.png)
+
+
+## 授权流程详解
+
+### 设备请求授权
+
+设备首先向授权服务器发送请求，获取设备代码和用户代码。该请求通常会包含客户端的身份信息以及所请求的权限范围（scope）。
+
+示例请求：
+
+```bash
+POST /oauth2/device_authorization HTTP/1.1
+Host: auth-server.com
+Content-Type: application/x-www-form-urlencoded
+
+response_type=device_code&client_id=client-device-id&scope=read_profile
+```
+
+服务器响应：
+
+```json
+{
+    "user_code": "DSZQ-FCQZ",
+    "device_code": "YAJawG1sR6MH3jzYWa317SpctmshliFIL0tajI21xwCVw2rNDTiu2MLSB3cqJ8SZjyTGT-7QA7v7lVKPoJFwQNwYQ6PLKINnAssOt0F5YwYX0076At2uRh53fIZL_86e",
+    "verification_uri_complete": "http://auth-server.com/oauth2/device_verification?user_code=DSZQ-FCQZ",
+    "verification_uri": "http://auth-server.com/oauth2/device_verification",
+    "expires_in": 1800,
+    "interval": 5
+}
+```
+
+### 用户授权
+
+设备展示 `user_code` 给用户，用户使用电脑或手机访问 `verification_uri`，并输入该用户代码进行授权。例如，用户会在浏览器中访问 `http://auth-server.com/oauth2/device_verification`，并输入 `XYZ-9876`。
+
+### 设备轮询授权状态
+
+在用户进行授权的同时，设备需要定期向授权服务器轮询授权状态。轮询间隔由授权服务器在最初响应时返回的 `interval` 字段指定。
+
+示例轮询请求：
+
+```bash
+POST /oauth2/token HTTP/1.1
+Host: auth-server.com
+Content-Type: application/x-www-form-urlencoded
+
+client_id=client-device-id&device_code=abc12345&grant_type=urn:ietf:params:oauth:grant-type:device_code
+```
+
+如果用户尚未完成授权，服务器会返回一个错误，表明需要继续等待。
+
+```json
+{
+  "error": "authorization_pending"
+}
+```
+
+### 获取访问令牌
+
+一旦用户完成授权，设备的轮询请求将返回一个访问令牌，设备即可使用该令牌访问受保护资源。
+
+成功响应：
+
+```json
+{
+  "access_token": "access-token-xyz",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "read_profile"
+}
+```
+## 如何实现 OAuth 2.0 设备授权流程
+
+在实际开发中，可以使用多种技术栈来实现 OAuth 2.0 设备授权流程。下面简要介绍使用 Spring Security 和 Spring Authorization Server 实现该流程的步骤：
+
+### 项目依赖
+
+确保项目中包含以下必要的依赖项：
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-oauth2-authorization-server</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+</dependencies>
+```
+#### 配置授权服务器
+
+在 Spring Boot 项目中配置 `AuthorizationServerConfig`，以启用设备授权端点：
+```java
+@Bean
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
+
+    //设置设备授权验证成功后处理逻辑，当前逻辑转发到/success
+    authorizationServerConfigurer.deviceAuthorizationEndpoint(Customizer.withDefaults())
+            .deviceVerificationEndpoint(deviceVerification ->
+                    deviceVerification.deviceVerificationResponseHandler(new SimpleUrlAuthenticationSuccessHandler("/success")));
+
+    RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+
+    // @formatter:off
+    http
+        .securityMatcher(endpointsMatcher).authorizeHttpRequests((authorize) -> {
+            authorize.anyRequest().authenticated();
+        }).csrf((csrf) -> {
+            csrf.ignoringRequestMatchers(endpointsMatcher);
+        })
+        .apply(authorizationServerConfigurer);
+    // @formatter:on
+
+
+    //设备授权相关配置
+    DeviceClientAuthenticationConfigurer deviceClientAuthenticationConfigurer = new DeviceClientAuthenticationConfigurer();
+    deviceClientAuthenticationConfigurer.configure(http);
+
+    http.exceptionHandling(exceptions -> exceptions.
+            authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")));
+
+    return http.build();
+}
+
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+    RegisteredClient registeredClient = RegisteredClient.withId("1")
+            .clientId("relive-device-client")
+            .clientAuthenticationMethods(s -> {
+                s.add(ClientAuthenticationMethod.NONE);
+            })
+            .authorizationGrantTypes(a -> {
+                a.add(AuthorizationGrantType.DEVICE_CODE);
+                a.add(AuthorizationGrantType.REFRESH_TOKEN);
+            })
+            .scope("message.read")
+            .clientSettings(ClientSettings.builder()
+                    .requireAuthorizationConsent(true)
+                    .requireProofKey(false)
+                    .build())
+            .tokenSettings(TokenSettings.builder()
+                    .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                    .accessTokenTimeToLive(Duration.ofSeconds(30 * 60))
+                    .refreshTokenTimeToLive(Duration.ofSeconds(60 * 60))
+                    .deviceCodeTimeToLive(Duration.ofSeconds(30 * 60))
+                    .reuseRefreshTokens(true)
+                    .build())
+            .build();
+    return new InMemoryRegisteredClientRepository(registeredClient);
+}
+```
+
+由于 Spring Authorization Server 对于设备授权客户端认证并没有支持，所以需要自定义 `DeviceClientAuthenticationConverter`与`DeviceClientAuthenticationProvider`，通过创建`DeviceClientAuthenticationConfigurer`配置类，注册设备授权客户端认证。
+
+```java
+public class DeviceClientAuthenticationConfigurer extends AbstractHttpConfigurer<DeviceClientAuthenticationConfigurer, HttpSecurity> {
+
+    private AuthenticationConverter deviceClientAuthenticationConverter;
+
+    private AuthenticationProvider deviceClientAuthenticationProvider;
+
+
+    public DeviceClientAuthenticationConfigurer deviceClientAuthenticationConverter(AuthenticationConverter deviceClientAuthenticationConverter) {
+        Assert.notNull(deviceClientAuthenticationConverter, "deviceClientAuthenticationConverter can not be null");
+        this.deviceClientAuthenticationConverter = deviceClientAuthenticationConverter;
+        return this;
+    }
+
+    public DeviceClientAuthenticationConfigurer deviceClientAuthenticationProvider(AuthenticationProvider deviceClientAuthenticationProvider) {
+        Assert.notNull(deviceClientAuthenticationProvider, "deviceClientAuthenticationProvider can not be null");
+        this.deviceClientAuthenticationProvider = deviceClientAuthenticationProvider;
+        return this;
+    }
+
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        AuthorizationServerSettings authorizationServerSettings = getAuthorizationServerSettings(http);
+
+        if (this.deviceClientAuthenticationConverter == null) {
+            this.deviceClientAuthenticationConverter = new DeviceClientAuthenticationConverter(
+                    authorizationServerSettings.getDeviceAuthorizationEndpoint());
+        }
+
+        if (this.deviceClientAuthenticationProvider == null) {
+            RegisteredClientRepository registeredClientRepository = getRegisteredClientRepository(http);
+            this.deviceClientAuthenticationProvider = new DeviceClientAuthenticationProvider(registeredClientRepository);
+        }
+
+        http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
+                .clientAuthentication(clientAuthentication ->
+                        clientAuthentication
+                                .authenticationConverter(deviceClientAuthenticationConverter)
+                                .authenticationProvider(deviceClientAuthenticationProvider)
+                );
+    }
+
+    private static AuthorizationServerSettings getAuthorizationServerSettings(HttpSecurity httpSecurity) {
+        AuthorizationServerSettings authorizationServerSettings = httpSecurity.getSharedObject(AuthorizationServerSettings.class);
+        if (authorizationServerSettings == null) {
+            authorizationServerSettings = getOptionalBean(httpSecurity, AuthorizationServerSettings.class);
+            if (authorizationServerSettings == null) {
+                authorizationServerSettings = AuthorizationServerSettings.builder().build();
+            }
+        }
+        return authorizationServerSettings;
+    }
+
+    private static RegisteredClientRepository getRegisteredClientRepository(HttpSecurity httpSecurity) {
+        RegisteredClientRepository registeredClientRepository = httpSecurity.getSharedObject(RegisteredClientRepository.class);
+        if (registeredClientRepository == null) {
+            registeredClientRepository = getOptionalBean(httpSecurity, RegisteredClientRepository.class);
+            if (registeredClientRepository == null) {
+                registeredClientRepository = new InMemoryRegisteredClientRepository();
+            }
+        }
+        return registeredClientRepository;
+    }
+
+    public static <T> T getOptionalBean(HttpSecurity httpSecurity, Class<T> type) {
+        Map<String, T> beansMap = BeanFactoryUtils.beansOfTypeIncludingAncestors(
+                httpSecurity.getSharedObject(ApplicationContext.class), type);
+        if (beansMap.size() > 1) {
+            throw new NoUniqueBeanDefinitionException(type, beansMap.size(),
+                    "Expected single matching bean of type '" + type.getName() + "' but found " +
+                            beansMap.size() + ": " + StringUtils.collectionToCommaDelimitedString(beansMap.keySet()));
+        }
+        return (!beansMap.isEmpty() ? beansMap.values().iterator().next() : null);
+    }
+}
+```
+
+
+如果你希望进一步了解 OAuth 2.0 设备授权流程的实现，可以参考我在 GitHub 上的示例项目：[OAuth2.0 设备授权流程 - Spring Security & Spring Authorization Server 示例](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/device-authorization-flow)。
+
+该项目详细演示了如何使用 Spring Security 和 Spring Authorization Server 实现设备授权流程，包含完整的代码和配置示例，帮助你快速上手。
+
+## 演示
+
+![](../static/images/blogs/oauth2-device.gif)
+
