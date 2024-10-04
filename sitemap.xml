@@ -57,6 +57,10 @@
   </url>
 
   <url>
+    <loc>/blog/oauth2-device-flow</loc>
+  </url>
+
+  <url>
     <loc>/blog/oauth2-introspection-with-jwt</loc>
   </url>
 

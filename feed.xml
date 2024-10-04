@@ -7,9 +7,19 @@
       <language>zh-cn</language>
       <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
       <webMaster>re_live27@163.com (ReLive27)</webMaster>
-      <lastBuildDate>Sun, 21 Apr 2024 19:20:01 GMT</lastBuildDate>
+      <lastBuildDate>Fri, 04 Oct 2024 20:32:29 GMT</lastBuildDate>
       <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
       
+  <item>
+    <guid>/blog/oauth2-device-flow</guid>
+    <title>OAuth2.0设备授权流程</title>
+    <link>/blog/oauth2-device-flow</link>
+    undefined
+    <pubDate>Fri, 04 Oct 2024 20:32:29 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category>
+  </item>
+
   <item>
     <guid>/blog/spring-ai-ollama</guid>
     <title>Spring AI 和 Ollama</title>
