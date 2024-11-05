@@ -1,0 +1,24 @@
+
+  <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+      <title>ReLive27 Blog</title>
+      <link>/blog</link>
+      <description>ReLive27&#39;s personal blog and website</description>
+      <language>zh-cn</language>
+      <managingEditor>re_live27@163.com (ReLive27)</managingEditor>
+      <webMaster>re_live27@163.com (ReLive27)</webMaster>
+      <lastBuildDate>Tue, 05 Nov 2024 22:32:29 GMT</lastBuildDate>
+      <atom:link href="/tags/hashicorp-vault/feed.xml" rel="self" type="application/rss+xml"/>
+      
+  <item>
+    <guid>/blog/oauth2-vault</guid>
+    <title>如何用 Vault 保护和管理 Spring Authorization Server JWT 密钥</title>
+    <link>/blog/oauth2-vault</link>
+    undefined
+    <pubDate>Tue, 05 Nov 2024 22:32:29 GMT</pubDate>
+    <author>re_live27@163.com (ReLive27)</author>
+    <category>SpringSecurity</category><category>OAuth2</category><category>HashiCorp Vault</category>
+  </item>
+
+    </channel>
+  </rss>
