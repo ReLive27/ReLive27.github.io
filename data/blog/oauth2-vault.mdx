@@ -1,0 +1,279 @@
+---
+title: 如何用 Vault 保护和管理 Spring Authorization Server JWT 密钥
+date: '2024-11-05 22:32:29'
+tags: ['SpringSecurity', 'OAuth2', 'HashiCorp Vault']
+draft: false
+authors: ['default']
+---
+## 简介
+
+在现代应用中，安全性是首要考虑因素，特别是在涉及用户身份认证和授权的服务中。JWT（JSON Web Token）在 OAuth 2.0 和 OpenID Connect 标准中扮演了重要角色。作为一种加密令牌，JWT 通常用于标识和验证用户或客户端的身份，不管是使用对称加密还是非对称加密算法生成JWT，对于密钥或私钥的安全存储始终是最关键的问题。本文将介绍如何使用 [HashiCorp Vault](https://www.vaultproject.io/) 来保护和管理 [Spring Authorization Server](https://spring.io/projects/spring-authorization-server) 构建的授权服务的 JWT 密钥，通过 Vault 的密钥管理功能，确保 JWT 密钥的安全性。
+
+## Vault 简介
+
+Vault 是一个专为密钥和机密数据管理而设计的工具，支持集中化的密钥存储和动态凭据生成功能。Vault 的主要功能包括：
+
+- **密钥存储**：使用加密方法保护敏感数据和密钥。
+- **动态凭据**：能够为不同的应用生成和轮转独立的密钥。
+- **访问控制**：基于策略管理，确保只有授权应用可以访问密钥。
+
+通过 Spring Vault 将HashiCorp Vault无缝集成到 Spring 应用中，用于管理 Spring Authorization Server 授权服务的 JWT 密钥。
+
+## 安装 Vault
+
+本示例介绍使用docker安装Vault，所以需要你准备docker环境或者通过Vault官网介绍进行二进制安装。
+
+> 请勿在生产环境使用下述简单的安装步骤，你应该设置访问控制策略。
+
+### 1. 拉取 Vault 镜像
+
+首先，拉取指定版本的 Vault 镜像（1.13.3）：
+
+```shell
+docker pull vault:1.13.3
+```
+
+### 2. 运行 Vault 容器
+
+以开发模式运行 Vault 容器：
+
+```shell
+docker run --cap-add=IPC_LOCK -d --name=dev-vault vault:1.13.3
+```
+
+### 3.查看 Vault 启动日志
+
+查看Vault启动日志，获取Root Token：
+
+```shell
+docker logs -f dev-vault
+```
+
+日志输出示例：
+```
+                 Api Address: http://127.0.0.1:8200
+                         Cgo: disabled
+             Cluster Address: https://127.0.0.1:8201
+                  Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", max_request_duration: "1m30s", max_request_size: "33554432", tls: "disabled")
+                   Log Level: info
+                       Mlock: supported: false, enabled: false
+               Recovery Mode: false
+                     Storage: inmem
+                     Version: Vault v1.13.3
+
+    WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
+    and starts unsealed with a single unseal key. The root token is already
+    authenticated to the CLI, so you can immediately begin using Vault.
+
+    You may need to set the following environment variable:
+
+        $ export VAULT_ADDR='http://127.0.0.1:8200'
+
+    The unseal key and root token are displayed below in case you want to
+    seal/unseal the Vault or re-authenticate.
+
+    Unseal Key: 1+yv+v5mz+aSCK67X6slL3ECxb4UDL8ujWZU/ONBpn0=
+    Root Token: s.XmpNPoi9sRhYtdKHaQhkHP6x
+
+    Development mode should NOT be used in production installations!
+```
+### 4.配置 Vault 客户端
+
+启动一个新的终端会话并进入容器：
+
+```shell
+docker exec -it dev-vault /bin/sh
+```
+
+设置 Vault 地址：
+
+```shell
+export VAULT_ADDR='http://127.0.0.1:8200'
+```
+
+将 Root Token 设置为环境变量：
+
+```shell
+export VAULT_TOKEN="s.XmpNPoi9sRhYtdKHaQhkHP6x"
+```
+
+5.验证 Vault 服务器是否正在运行
+在容器内运行以下命令检查服务器状态：
+
+```shell
+vault status
+```
+
+如果您遇到如下错误，请检查VAULT\_ADDR环境变量配置正确。
+```
+    Error checking seal status: Get "https://127.0.0.1:8200/v1/sys/seal-status": http: server gave HTTP response to HTTPS client
+```
+### 6. 启用 Transit 引擎
+
+```shell
+vault secrets enable transit
+```
+
+### 7. 创建支持签名的密钥
+
+使用 rsa-2048 类型的密钥，以支持签名操作：
+
+```bash
+vault write -f transit/keys/oauth2 type="rsa-2048"
+```
+
+## 将 Spring Authorization Server 配置为使用 Vault 中的密钥
+
+在 Spring Authorization Server 项目中，修改 `application.yml` 配置文件，配置Vault服务地址，注意token为Vault启动日志中的Root Token。
+
+```yaml
+spring:
+  application:
+    name: authorization-service
+  cloud:
+    vault:
+      scheme: http
+      uri: http://127.0.0.1:8200
+      authentication: token
+      token: ${VAULT_TOKEN:hvs.AAKNQ8OGZqwb5NgtyM1DH1fV}
+      fail-fast: true
+      kv:
+        enabled: true
+        backend: transit
+```
+
+接下来我们需要自定义`VaultJwtEncoder`，使用Vault生成JWT签名。
+
+```java
+public final class VaultJwtEncoder implements JwtEncoder {
+    private final VaultOperations vaultOperations;
+    private static final JwsHeader DEFAULT_JWS_HEADER = JwsHeader.with(SignatureAlgorithm.RS256).type(JOSEObjectType.JWT.getType()).build();
+    private String key = "oauth2"; //key需要和vault创建签名密钥key保持一致
+
+    public VaultJwtEncoder(VaultOperations vaultOperations) {
+        Assert.notNull(vaultOperations, "vaultOperations cannot be null");
+        this.vaultOperations = vaultOperations;
+    }
+
+    @SneakyThrows
+    @Override
+    public Jwt encode(JwtEncoderParameters parameters) throws JwtEncodingException {
+        JwsHeader headers = parameters.getJwsHeader();
+        if (headers == null) {
+            headers = DEFAULT_JWS_HEADER;
+        }
+        JWSHeader jwsHeader = convert(headers);
+        JwtClaimsSet claims = parameters.getClaims();
+        JWTClaimsSet jwtClaimsSet = convert(claims);
+
+        JWSObject jwsObject = new JWSObject(jwsHeader, new Payload(jwtClaimsSet.toJSONObject()));
+
+        // Sign the JWS object
+        String signingInput = new String(jwsObject.getSigningInput());
+        Plaintext plaintext = Plaintext.of(signingInput).with(VaultTransitContext.builder().build());
+        String signature = vaultOperations.opsForTransit().sign(key, plaintext).getSignature();
+
+        // Attach the signature to the JWS object
+        Base64URL signatureBase64URL = Base64URL.from(signature.startsWith("vault:v1:") ? signature.substring(9) : signature);
+        jwsObject = new JWSObject(jwsHeader.toBase64URL(), new Payload(jwtClaimsSet.toJSONObject()), signatureBase64URL);
+
+        // Serialize JWS to compact format
+        String jws = jwsObject.serialize();
+        return new Jwt(jws, claims.getIssuedAt(), claims.getExpiresAt(), headers.getHeaders(), claims.getClaims());
+
+    }
+...
+}
+```
+
+其他Spring Authorization Server授权服务配置和之前文章一致，这里不再赘述，具体配置可以通过文末链接查看源码，这里我们只讲述与文章相关的核心代码逻辑。
+
+## 资源服务配置Vault进行验证JWT签名
+
+在我们使用Vault在授权服务生成JWT后，资源服务作为JWT的使用者，同样需要验签逻辑进行验证签名，允许客户端请求通过。
+
+通过自定义`VaultJwtDecoder`解析JWT的签名字符串，由Vault验证签名是否有效，当签名有效解析JWT其他部分，当签名被篡改，抛出异常终止操作。
+
+```java
+public class VaultJwtDecoder implements JwtDecoder {
+    private String key = "oauth2";
+    private OAuth2TokenValidator<Jwt> jwtValidator = JwtValidators.createDefault();
+    private Converter<Map<String, Object>, Map<String, Object>> claimSetConverter = MappedJwtClaimSetConverter.withDefaults(Collections.emptyMap());
+    private final VaultOperations vaultOperations;
+
+
+    public VaultJwtDecoder(VaultOperations vaultOperations) {
+        Assert.notNull(vaultOperations, "vaultOperations cannot be null");
+        this.vaultOperations = vaultOperations;
+    }
+
+    public void setJwtValidator(OAuth2TokenValidator<Jwt> jwtValidator) {
+        Assert.notNull(jwtValidator, "jwtValidator cannot be null");
+        this.jwtValidator = jwtValidator;
+    }
+
+    @SneakyThrows
+    @Override
+    public Jwt decode(String token) throws JwtException {
+        SignedJWT jwt = this.parse(token);
+        Jwt createdJwt = this.createJwt(token, jwt);
+        return this.validateJwt(createdJwt);
+    }
+
+    private SignedJWT parse(String token) {
+        try {
+            return SignedJWT.parse(token);
+        } catch (Exception e) {
+            log.trace("Failed to parse token", e);
+            throw new BadJwtException(String.format("An error occurred while attempting to decode the Jwt: %s", e.getMessage()), e);
+        }
+    }
+
+    private Jwt createJwt(String token, SignedJWT parsedJwt) {
+        try {
+            // Verify signature using Vault
+            String signingInput = new String(parsedJwt.getSigningInput());
+            String signature = parsedJwt.getSignature().toString();
+
+            Plaintext plaintext = Plaintext.of(signingInput).with(VaultTransitContext.builder().build());
+            boolean isValid = vaultOperations.opsForTransit().verify(key, plaintext, Signature.of("vault:v1:" + signature));
+
+            if (!isValid) {
+                throw new JOSEException("Token signature is not valid");
+            }
+            JWTClaimsSet jwtClaimsSet = parsedJwt.getJWTClaimsSet();
+            Map<String, Object> headers = new LinkedHashMap<>(parsedJwt.getHeader().toJSONObject());
+            Map<String, Object> claims = this.claimSetConverter.convert(jwtClaimsSet.getClaims());
+            return Jwt.withTokenValue(token).headers((h) -> {
+                h.putAll(headers);
+            }).claims((c) -> {
+                c.putAll(claims);
+            }).build();
+        } catch (JOSEException e) {
+            log.trace("Failed to process JWT", e);
+            throw new JwtException(String.format("An error occurred while attempting to decode the Jwt: %s", e.getMessage()), e);
+        } catch (Exception e) {
+            log.trace("Failed to process JWT", e);
+            if (e.getCause() instanceof ParseException) {
+                throw new BadJwtException(String.format("An error occurred while attempting to decode the Jwt: %s", "Malformed payload"), e);
+            } else {
+                throw new BadJwtException(String.format("An error occurred while attempting to decode the Jwt: %s", e.getMessage()), e);
+            }
+        }
+    }
+...
+}
+
+```
+
+## 验证 JWT 签名和解密过程
+
+通过 Vault 的密钥进行JWT签名和验证，确保所有的 JWT 都是通过 Vault 保护的密钥生成的。我们通过完整的OAuth2.0授权码流程来验证这一过程。
+
+浏览器访问：[http://127.0.0.1:8070/client/test](http://127.0.0.1:8070/client/test)
+
+## 结论
+
+通过将 Vault 集成到 Spring Authorization Server 中，我们可以安全地管理 JWT 密钥，实现了密钥的集中存储和访问控制。通过本文的介绍，希望你可以在自己的应用中尝试这一方法，为用户提供更安全的身份认证服务。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-jwk-with-vault)获得。

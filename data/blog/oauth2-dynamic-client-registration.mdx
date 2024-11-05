@@ -1,0 +1,316 @@
+---
+title: OAuth2.0 动态注册客户端
+date: '2024-11-05 22:00:29'
+tags: ['SpringSecurity', 'OAuth2']
+draft: false
+authors: ['default']
+---
+## 什么是 OAuth 2.0 客户端自动注册？
+
+OAuth 2.0 客户端注册通常是在授权服务器的管理界面或通过静态配置文件手动完成的。客户端自动注册是指应用在启动或运行过程中通过代码与 OAuth 2.0 授权服务器交互，自动注册并获取 `client_id` 和 `client_secret` 等必要的认证信息。这个过程不仅简化了客户端的管理，还允许系统在不同上下文中动态创建和配置客户端。
+
+## 客户端自动注册的典型场景
+
+客户端自动注册适用于以下场景：
+
+1.  **多租户应用**：每个租户都有独立的客户端配置，系统需要为每个租户动态创建 OAuth 客户端。
+2.  **微服务架构**：微服务可能在部署过程中需要注册自己的客户端，以便与授权服务器通信。
+3.  **动态环境**：系统需要在运行时根据需求注册和配置不同的客户端，而不是提前硬编码配置。
+
+## 动态客户端注册的流程
+
+OAuth 2.0 动态客户端注册流程使得客户端能够通过API动态注册自身，而无需手动操作。这一过程涉及多个步骤，确保客户端能够与授权服务器有效通信并获得必要的凭证信息。以下是动态客户端注册的详细流程说明：
+
+### 1. **客户端发送注册请求**
+
+客户端想要动态注册时，会向授权服务器发送一个HTTP `POST`请求。该请求包含关于客户端的基本信息，通常为JSON格式。请求的内容根据具体应用的需求可能有所不同，但主要包括以下信息：
+
+*   `client_name`：客户端的名称，通常是易于识别的应用名。
+*   `redirect_uris`：回调URL列表，授权服务器在授权码授权流程中会使用该URL。
+*   `grant_types`：客户端支持的授权类型，例如`authorization_code`、`client_credentials`等。
+*   `response_types`：客户端期望的响应类型，如`code`（授权码）。
+*   `scope`：客户端请求的权限范围。
+*   `token_endpoint_auth_method`：客户端将如何在令牌端点进行身份验证，常见的方式有`client_secret_basic`、`client_secret_post`等。
+*   `token_endpoint_auth_signing_alg`：客户端在**令牌端点**进行身份验证时使用的签名算法。
+*   `jwks_uri`：公钥信息URL，当客户端身份验证方式为`private_key_jwt`，客户端需要提供公钥信息URL。
+
+#### 示例请求：
+
+```json
+{
+  "client_name": "SampleApp",
+  "redirect_uris": ["https://client.example.com/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "scope": "openid profile email",
+  "token_endpoint_auth_method": "client_secret_basic",
+  "token_endpoint_auth_signing_alg": "RS256"
+}
+```
+
+### 2. **授权服务器验证请求**
+
+授权服务器在接收到客户端的注册请求后，会对请求内容进行验证：
+
+*   **校验字段格式**：检查提交的数据是否符合预期的格式和标准。比如，回调URL是否是有效的URL格式，授权类型是否在支持的范围内。
+*   **策略验证**：授权服务器可以根据其内部策略决定是否允许注册特定类型的客户端。例如，某些服务器可能只允许预先批准的客户端进行注册。
+
+### 3. **授权服务器生成客户端凭证**
+
+如果注册请求通过验证，授权服务器会为客户端生成必要的凭证信息，包括：
+
+*   `client_id`：唯一标识客户端的ID，通常是由授权服务器随机生成的字符串。
+*   `client_secret`：客户端密钥，在需要认证的授权类型中使用（例如客户端凭证授权类型）。同样是随机生成并安全存储。
+*   其他属性如`client_id_issued_at`（客户端ID生成时间）、`client_secret_expires_at`（客户端密钥的过期时间，如果有）等。
+
+生成这些信息后，授权服务器会将客户端的注册信息存储在其内部数据库中。
+
+### 4. **授权服务器返回注册响应**
+
+在生成客户端凭证后，授权服务器会将客户端信息作为HTTP响应返回给客户端，通常也是以JSON格式提供。返回的响应将包含以下信息：
+
+*   `client_id`：客户端的唯一ID。
+*   `client_secret`：客户端密钥（如果存在）。
+*   `client_secret_expires_at`：客户端密钥的过期时间（如果适用）。
+*   `client_id_issued_at`：客户端ID的生成时间。
+*   其他可选的注册信息（如Logo URI、政策URL等）。
+
+#### 示例响应：
+
+```json
+{
+    "settings.client.require-authorization-consent": false,
+    "grant_types": [
+        "authorization_code"
+    ],
+    "registration_client_uri": "http://127.0.0.1:8080/connect/register?client_id=ECnm9EdfP44eGV2KmF2J_C5ERw_5rY4_LR-vSKZDJuM",
+    "redirect_uris": [
+        "http://120.0.0.1:8070/callback"
+    ],
+    "client_id": "ECnm9EdfP44eGV2KmF2J_C5ERw_5rY4_LR-vSKZDJuM",
+    "token_endpoint_auth_method": "client_secret_basic",
+    "scope": "LOGIN",
+    "client_id_issued_at": 1729435078,
+    "client_secret": "sc6FzJ-azjcZ_W6cKMS_jb1tAEiZpVD__y9tQhgj6Zq8wySXM6GWX7QG-H8w0YZX",
+    "client_name": "client_1",
+    "settings.client.require-proof-key": false,
+    "response_types": [
+        "code"
+    ],
+    "id_token_signed_response_alg": "RS256",
+    "registration_access_token": "eyJraWQiOiI2ODBmNTVlOC1lMmZhLTQ0Y2UtYTZlYi1mMGNmNGZjYmNiOTAiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJFQ25tOUVkZlA0NGVHVjJLbUYySl9DNUVSd181clk0X0xSLXZTS1pESnVNIiwiYXVkIjoiRUNubTlFZGZQNDRlR1YyS21GMkpfQzVFUndfNXJZNF9MUi12U0taREp1TSIsIm5iZiI6MTcyOTQzNTA3OCwic2NvcGUiOlsiY2xpZW50LnJlYWQiXSwiaXNzIjoiaHR0cDovLzEyNy4wLjAuMTo4MDgwIiwiZXhwIjoxNzI5NDM1Mzc4LCJpYXQiOjE3Mjk0MzUwNzgsImp0aSI6ImYxNGE4NTY2LTgxM2UtNGFiZS04Njc3LTc0ZDE2ZjBjMmI1YSJ9.R92KEFzL9is7-wuBTXygT-7l6DEmtv6VArKv1jpmpLQwU4nULB878FqecMti_dEeUVTQ5GXvtBey49Fcld8vaqAjLPTkXp7M7J0UQ6auWSrjoDXlfyHVf5KODExiKmbcxqnrLCphCw2TBok848gcbpJIhTRJknsc6SqU7rbzp68_WY2y3L7PujPjq8B9kD2L9rvlHFw3qCi1Pd2eQ7GlL3e_dCDD7CEBXKSeMhOfv_BGrGTG_Iikd_8vDty6nGxGCyTP1e0JRdzwdIj8JmvK1HgIV0w4zq6bU3ipSmM3UJk2qUqcfH_z9KZ5yj9kIFpKjZNMgT_MxllKzlvJ-vnxtw",
+    "client_secret_expires_at": 0
+}
+```
+
+### 5. **客户端使用注册信息**
+
+客户端在获得`client_id`和`client_secret`后，可以使用这些信息向授权服务器发起OAuth 2.0相关请求（例如获取访问令牌）。每个后续请求都会携带这些凭证信息，授权服务器会根据客户端的身份验证方式验证请求。
+
+*   在授权码流程中，客户端会使用`client_id`和`client_secret`来换取访问令牌。
+*   在客户端凭证流程中，客户端直接用这些信息与授权服务器交换访问令牌。
+
+## 使用 Spring Authorization Server 实现动态客户端注册
+
+为了在项目中实现动态客户端注册功能，可以使用Spring Authorization Server实现授权服务来支持OAuth 2.0的动态客户端注册。
+
+### 项目依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+    <version>3.1.5</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-oauth2-authorization-server</artifactId>
+    <version>1.2.1</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    <version>3.1.5</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <version>3.1.5</version>
+</dependency>
+```
+
+### 配置授权服务器
+
+配置Spring Authorization Server 授权服务器，开启客户端动态注册。
+
+```java
+@Bean
+public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+    // 开启客户端注册端点
+    http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
+            .oidc(oidc -> oidc.clientRegistrationEndpoint(clientRegistrationEndpoint -> {
+                clientRegistrationEndpoint
+                        .authenticationProviders(configureCustomClientMetadataConverters());
+            }));
+    // 资源服务配置
+    http.oauth2ResourceServer(oauth2ResourceServer ->
+            oauth2ResourceServer.jwt(Customizer.withDefaults()));
+    // 认证失败跳转到登录页面
+    return http.exceptionHandling(exceptions -> exceptions.
+            authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))).build();
+}
+```
+
+### 配置注册客户端
+
+注册客户端用于向授权服务器注册新客户端。客户端必须配置范围`client.create`，并可选地`client.read`分别用于注册客户端和检索客户端。注册客户端用于在动态注册过程中获取初始访问令牌
+
+```java
+@Bean
+public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
+    RegisteredClient registrarClient = RegisteredClient.withId("1")
+            .clientId("registrar-client")
+            .clientSecret("{noop}relive27-client")
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+            .scope("client.create")
+            .scope("client.read")
+            .build();
+
+    JdbcRegisteredClientRepository jdbcRegisteredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
+    jdbcRegisteredClientRepository.save(registrarClient);
+    return jdbcRegisteredClientRepository;
+}
+```
+
+### 自定义客户端元数据
+
+为了支持在注册客户端时可以增加一些参数，便于我们做一些额外的业务操作，可以自定义默认值`AuthenticationProvider`以支持自定义客户端元数据参数。以下示例显示了支持自定义客户端元数据参数`require-authorization-consent`和`require-proof-key`的实现。
+
+```java
+public static Consumer<List<AuthenticationProvider>> configureCustomClientMetadataConverters() {
+    List<String> customClientMetadata = Arrays.asList("require-authorization-consent", "require-proof-key");
+
+    return (authenticationProviders) -> {
+        CustomRegisteredClientConverter registeredClientConverter =
+                new CustomRegisteredClientConverter(customClientMetadata);
+        CustomClientRegistrationConverter clientRegistrationConverter =
+                new CustomClientRegistrationConverter(customClientMetadata);
+
+        authenticationProviders.forEach((authenticationProvider) -> {
+            if (authenticationProvider instanceof OidcClientRegistrationAuthenticationProvider) {
+                OidcClientRegistrationAuthenticationProvider provider = (OidcClientRegistrationAuthenticationProvider) authenticationProvider;
+                provider.setRegisteredClientConverter(registeredClientConverter);
+                provider.setClientRegistrationConverter(clientRegistrationConverter);
+            }
+            if (authenticationProvider instanceof OidcClientConfigurationAuthenticationProvider) {
+                OidcClientConfigurationAuthenticationProvider provider = (OidcClientConfigurationAuthenticationProvider) authenticationProvider;
+                provider.setClientRegistrationConverter(clientRegistrationConverter);
+            }
+        });
+    };
+}
+
+...
+```
+
+## 使用 Spring Security OAuth2 Client 创建客户端服务
+
+本节主要用于Spring Security OAuth2 Client 让客户端通过注册端点向授权服务器注册自身，获取`client_id`和`client_secret`等凭证。
+
+首先参考之前文章[《Spring Security 持久化OAuth2客户端》](https://relive27.github.io/blog/persisrence-oauth2-client)创建一个OAuth2客户端服务，该文章主要介绍将客户端配置持久化到数据库。
+
+其次我们创建一个Spring 启动事件，用于在服务启动成功后执行下列步骤：
+
+*   **构建注册请求**：客户端创建一个HTTP POST请求，包含注册所需的客户端信息，如`redirect_uris`、`grant_types`、`token_endpoint_auth_method`等。
+
+*   **发送注册请求**：使用HTTP客户端库，将请求发送到授权服务器的注册端点。
+
+*   **解析注册响应**：授权服务器成功注册后会返回包含`client_id`和`client_secret`的JSON响应。客户端解析响应并将这些凭证信息存储到数据库中，以便后续使用。
+
+### 客户端注册事件
+
+自定义OAuth2ClientRegistrationEvent实现ApplicationListener\<ApplicationReadyEvent>监听器。`ApplicationReadyEvent`事件表明服务已准备好。
+
+```java
+@Component
+@RequiredArgsConstructor
+public class OAuth2ClientRegistrationEvent implements ApplicationListener<ApplicationReadyEvent> {
+
+    private final JdbcClientRegistrationRepository registrationRepository;
+
+    private final OAuth2ClientProperties properties;
+
+    @SneakyThrows
+    @Override
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        URI clientsEndpoint = new URI("http://localhost:8080/connect/register");
+
+        // We want to register a client for the code grant
+        OIDCClientMetadata clientMetadata = new OIDCClientMetadata();
+        clientMetadata.setGrantTypes(Collections.singleton(GrantType.AUTHORIZATION_CODE));
+        clientMetadata.setRedirectionURI(URI.create("http://127.0.0.1:8070/oauth2/callback/messaging-client-authorization-code"));
+        clientMetadata.setName("Test Client");
+        clientMetadata.setScope(new Scope("message.read"));
+        clientMetadata.setCustomField("require-authorization-consent", false);
+        clientMetadata.setCustomField("require-proof-key", false);
+
+        OIDCClientRegistrationRequest regRequest = new OIDCClientRegistrationRequest(
+                clientsEndpoint,
+                clientMetadata,
+                this.getToken()
+        );
+
+        HTTPResponse httpResponse = regRequest.toHTTPRequest().send();
+
+        ClientRegistrationResponse regResponse = OIDCClientRegistrationResponseParser.parse(httpResponse);
+
+        if (!regResponse.indicatesSuccess()) {
+            ClientRegistrationErrorResponse errorResponse = (ClientRegistrationErrorResponse) regResponse;
+            throw new IllegalStateException(errorResponse.getErrorObject().toString());
+        }
+
+        OIDCClientInformationResponse successResponse = (OIDCClientInformationResponse) regResponse;
+        this.registrationRepository.save(new OAuth2ClientRegistrationMapper(successResponse).asClientRegistration());
+
+    }
+
+    private BearerAccessToken getToken() throws URISyntaxException, IOException, ParseException {
+        AuthorizationGrant clientGrant = new ClientCredentialsGrant();
+        OAuth2ClientProperties.Registration registration = properties.getRegistration().get("client-registration");
+        ClientID clientID = new ClientID(registration.getClientId());
+        Secret clientSecret = new Secret(registration.getClientSecret());
+        ClientAuthentication clientAuth = new ClientSecretBasic(clientID, clientSecret);
+
+        Scope scope = new Scope(registration.getScope().toArray(new String[0]));
+
+        OAuth2ClientProperties.Provider provider = properties.getProvider().get("client-registartion-provider");
+        URI tokenEndpoint = new URI(provider.getTokenUri());
+
+        TokenRequest request = new TokenRequest(tokenEndpoint, clientAuth, clientGrant, scope);
+
+        TokenResponse response = TokenResponse.parse(request.toHTTPRequest().send());
+
+        if (!response.indicatesSuccess()) {
+            TokenErrorResponse errorResponse = response.toErrorResponse();
+            throw new IllegalStateException(errorResponse.getErrorObject().toString());
+        }
+
+        AccessTokenResponse successResponse = response.toSuccessResponse();
+
+        AccessToken accessToken = successResponse.getTokens().getAccessToken();
+        return new BearerAccessToken(accessToken.getValue());
+    }
+}
+```
+
+最后让我们将授权服务和客户端服务都启动完成，浏览器访问[http://127.0.0.1:8070/client/test](http://127.0.0.1:8070/client/test)展示效果。
+
+## 结论
+
+OAuth 2.0 动态客户端注册流程通过API简化了客户端的注册过程，极大地提升了自动化和可扩展性。动态注册特别适合在微服务环境中使用，允许服务在创建或启动时自动注册到授权服务器。
+
+与往常一样，本文中使用的源代码可[在 GitHub 上](https://github.com/ReLive27/spring-security-oauth2-sample/tree/main/oauth2-client-registration)获得。
